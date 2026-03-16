@@ -71,6 +71,9 @@ void leaf_can_filter_print_variables(struct leaf_can_filter_frame *df,
 	static uint8_t x11a_raw_dat_d[8];
 	static uint8_t x11a_raw_dat[8];
 
+	static uint8_t x1db_raw_dat_d[8];
+	static uint8_t x1db_raw_dat[8];
+
 	char buf[1024*4];
 	buf[0] = '\0';
 
@@ -82,6 +85,11 @@ void leaf_can_filter_print_variables(struct leaf_can_filter_frame *df,
 	if (f->id == 0x11A) {
 		memcpy(x11a_raw_dat_d, df->data, 8u);
 		memcpy(x11a_raw_dat, f->data, 8u);
+	}
+
+	if (f->id == 0x1DB) {
+		memcpy(x1db_raw_dat_d, df->data, 8u);
+		memcpy(x1db_raw_dat, f->data, 8u);
 	}
 
 	sprintf(buf, "\033[H");
@@ -125,6 +133,8 @@ void leaf_can_filter_print_variables(struct leaf_can_filter_frame *df,
 		fi._bms_vars.max_power_for_charger_kwt);
 	sprintf(buf + strlen(buf), "temperature C:   %f                    \n",
 		fi._bms_vars.temperature_c);
+	sprintf(buf + strlen(buf), "1db: crc8:       %x                    \n",
+		x1db_raw_dat[7]);
 
 	sprintf(buf + strlen(buf), "\033[K\n");
 
@@ -226,6 +236,18 @@ int main()
 			f.id = c_inst._frame.id;
 			f.len = c_inst._frame.len;
 			memcpy(f.data, c_inst._frame.data, f.len);
+
+			/*f.id = 0x1db;
+			f.len = 8;
+			f.data[0] = 0xFF;
+			f.data[1] = 0xE0;
+			f.data[2] = 0xC2;
+			f.data[3] = 0x2A;
+			f.data[4] = 0x5B;
+			f.data[5] = 0x00;
+			f.data[6] = 0x03;
+			f.data[7] = 0xB4;*/
+
 			fd = f; /* save delta */
 
 			/* simple_print_frame(&c_inst); */
