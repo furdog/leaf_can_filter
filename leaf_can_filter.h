@@ -1,19 +1,11 @@
 #ifndef   LEAF_CAN_FILTER_GUARD
 #define   LEAF_CAN_FILTER_GUARD
 
+#include "lcf_common.h"
+
 #include <stdint.h>
 #include "charge_counter.h"
 #include "dev_timeout_led_indicator.h"
-
-/******************************************************************************
- * Common
- *****************************************************************************/
-/* Leaf can frame data structure */
-struct leaf_can_filter_frame {
-	uint32_t id;
-	uint8_t  len;
-	uint8_t  data[8];
-};
 
 /* Depend on struct leaf_can_filter_frame */
 #include "leafspy_can_filter.h"

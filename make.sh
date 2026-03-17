@@ -16,8 +16,8 @@ export OTA_IP="7.7.7.7"
 
 export TARGET_NAME="LeafBOX"
 #export TARGET=leaf_can_filter_esp32c6_hw2
-#export TARGET=leaf_can_filter_esp32c6_hw_zero
-export TARGET=can_filter_v3_native_esp32c6
+export TARGET=leaf_can_filter_esp32c6_hw_zero
+#export TARGET=can_filter_v3_native_esp32c6
 export TARGET_LANG="uk-UA";
 #export TARGET_LANG="en-US";
 
