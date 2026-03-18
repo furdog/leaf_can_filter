@@ -9,15 +9,15 @@
 /** Generates 16 bit cyclic XOR hash */
 uint16_t _lcf_keygen_hash_u16(uint16_t val, uint16_t seed)
 {
-	uint8_t i;
+	uint16_t i;
 
 	uint16_t hash = 0u;
 
 	for (i = 0u; i < 16u; i++) {
-		/* If the i-th bit is set, XOR with the shifted value, 
+		/* If the i-th bit is set, XOR with the shifted value,
 		   otherwise XOR with the seed. */
 		uint16_t mask = ((val >> i) & 1u) ? (val >> (i + 1u)) : seed;
-        
+
 		hash = (hash << 1u) ^ mask;
 	}
 
@@ -31,9 +31,9 @@ uint16_t _lcf_keygen_hash_u16(uint16_t val, uint16_t seed)
 uint16_t _lcf_keygen_mix_xor_product(uint16_t seed, uint16_t val_a,
 				     uint16_t val_b)
 {
-	uint16_t key_mix = (val_b ^ 0x7F88u) | (val_a ^ 0x8FE7u);
+	uint16_t key_mix   = (val_b ^ 0x7F88u) | (val_a ^ 0x8FE7u);
 	uint16_t seed_diff = (seed >> 8u) ^ (seed & 0xFFu);
-    
+
 	return (key_mix * seed_diff) & 0xFFFFu;
 }
 
@@ -53,32 +53,32 @@ uint16_t _lcf_keygen_mix_sum_and_product(uint16_t a, uint16_t b)
 uint16_t _lcf_keygen_rotate_and_multiply(uint16_t a, uint16_t b)
 {
 	/* Determine shift amount (0-15) based on low nibble of inputs */
-	uint32_t shift = b & (a | 0x0006u) & 0xFu;
+	uint16_t shift = b & (a | 0x0006u) & 0xFu;
 
 	/* Circular shift (Rotate) */
-	uint16_t rot_a = (a >> shift) | (a << (16u - shift));
-	uint16_t rot_b = (b << shift) | (b >> (16u - shift));
-    
+	uint16_t rot_a = (uint16_t)((a >> shift) | (a << (16u - shift)));
+	uint16_t rot_b = (uint16_t)((b << shift) | (b >> (16u - shift)));
+
 	return (rot_a * rot_b) & 0xFFFFu;
 }
 
 /**
- * The core transformation logic. 
+ * The core transformation logic.
  * Combines rotation, non-linear mixing, and the cyclic XOR hash.
  */
 uint32_t _lcf_keygen_run_auth_transform(uint16_t seed, uint16_t part_a,
-				 uint16_t part_b)
+					uint16_t part_b)
 {
 	uint16_t mixed_rot = _lcf_keygen_rotate_and_multiply(part_a, part_b);
 	uint16_t mixed_sum = _lcf_keygen_mix_sum_and_product(part_a, part_b);
-    
-	uint16_t step1 = _lcf_keygen_mix_xor_product(seed, mixed_rot,
-						     mixed_sum);
+
+	uint16_t step1 =
+	    _lcf_keygen_mix_xor_product(seed, mixed_rot, mixed_sum);
 	uint16_t step2 = _lcf_keygen_mix_xor_product(seed, mixed_sum, step1);
-    
+
 	uint16_t hash_lo = _lcf_keygen_hash_u16(step1, 0x8421u);
 	uint16_t hash_hi = _lcf_keygen_hash_u16(step2, 0x8421u);
-    
+
 	return ((uint32_t)hash_lo << 16u) | hash_hi;
 }
 
@@ -86,18 +86,17 @@ uint32_t _lcf_keygen_run_auth_transform(uint16_t seed, uint16_t part_a,
  * Main entry point: Takes a 32-bit challenge and fills an
  * 8-byte response buffer.
  */
-void _lcf_keygen_solve_battery_challenge(uint32_t challenge,
-					 uint8_t* response)
+void _lcf_keygen_solve_battery_challenge(uint32_t challenge, uint8_t *response)
 {
 	uint16_t chal_hi = (uint16_t)(challenge >> 16u);
 	uint16_t chal_lo = (uint16_t)(challenge & 0xFFFFu);
 
 	/* Static magic number 0x54e9 and 0x3afd likely act as
-	* device-specific keys */
-	uint32_t res_a = _lcf_keygen_run_auth_transform(0x54E9u, 0x3AFDu,
-							chal_hi);
-	uint32_t res_b = _lcf_keygen_run_auth_transform(chal_lo, chal_hi,
-							0x54E9u);
+	 * device-specific keys */
+	uint32_t res_a =
+	    _lcf_keygen_run_auth_transform(0x54E9u, 0x3AFDu, chal_hi);
+	uint32_t res_b =
+	    _lcf_keygen_run_auth_transform(chal_lo, chal_hi, 0x54E9u);
 
 	/* Byte-packing the result into the 8-byte response array */
 	response[0] = (uint8_t)(res_a);

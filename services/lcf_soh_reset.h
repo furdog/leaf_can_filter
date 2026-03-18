@@ -1,9 +1,9 @@
 #pragma once
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
 
 #include "../lcf_common.h"
 #include "lcf_keygen.h"
@@ -61,39 +61,39 @@ struct lcf_sr {
 	uint32_t _heartbeat_clock_ms;
 
 	struct leaf_can_filter_frame _tx;
-	bool _has_tx;
+	bool			     _has_tx;
 	struct leaf_can_filter_frame _rx;
-	bool _has_rx;
+	bool			     _has_rx;
 
 	uint32_t _timeout_ms;
 	uint32_t _timer_ms;
 
 	uint32_t _incoming_challenge;
-	uint8_t  _solved_challenge[8];
-	uint8_t  _sn;
+	uint8_t	 _solved_challenge[8];
+	uint8_t	 _sn;
 };
 
 void lcf_sr_init(struct lcf_sr *self)
 {
-	self->_state = 0u;
+	self->_state  = 0u;
 	self->_status = LCF_SR_STATUS_STOPPED;
 
-	self->_heartbeat_clock_ms =  LCF_SR_HEARTBEAT_RATE_MS;
+	self->_heartbeat_clock_ms = LCF_SR_HEARTBEAT_RATE_MS;
 
 	self->_has_tx = false;
 	self->_has_rx = false;
 
 	self->_timeout_ms = 0u;
-	self->_timer_ms   = 0u;
+	self->_timer_ms	  = 0u;
 }
 
 void _lcf_sr_push_tx(struct lcf_sr *self, uint8_t *data, uint8_t len)
 {
-		/* Prepare TX frame for popping */
-		self->_has_tx = true;
-		self->_tx.id  = LCF_SR_TX_ID;
-		self->_tx.len = len;
-		(void)memcpy(self->_tx.data, data, 8u);
+	/* Prepare TX frame for popping */
+	self->_has_tx = true;
+	self->_tx.id  = LCF_SR_TX_ID;
+	self->_tx.len = len;
+	(void)memcpy(self->_tx.data, data, 8u);
 }
 
 /** Push RX CAN frame for processing, returns false if busy. */
@@ -135,7 +135,7 @@ void lcf_sr_start(struct lcf_sr *self)
 {
 	lcf_sr_init(self);
 
-	self->_state = LCF_SR_STATE_IDLE;
+	self->_state  = LCF_SR_STATE_IDLE;
 	self->_status = LCF_SR_STATUS_ACTIVE;
 }
 
@@ -152,10 +152,7 @@ void lcf_sr_abort(struct lcf_sr *self, uint8_t status)
 	self->_status = status;
 }
 
-uint8_t lcf_sr_get_status(struct lcf_sr *self)
-{
-	return self->_status;
-}
+uint8_t lcf_sr_get_status(struct lcf_sr *self) { return self->_status; }
 
 /* Prevalidate (validate everything ecept payload) */
 bool _lcf_sr_pre_validate_response(struct lcf_sr *self, uint8_t *expec,
@@ -167,13 +164,13 @@ bool _lcf_sr_pre_validate_response(struct lcf_sr *self, uint8_t *expec,
 	if (self->_timeout_ms >= LCF_SR_RX_TIMEOUT_MS) {
 		lcf_sr_abort(self, LCF_SR_STATUS_TIMEOUT);
 
-	/* Ignore if no rx */
+		/* Ignore if no rx */
 	} else if (!self->_has_rx) {
 
-	/* Ignore if invalid message */
+		/* Ignore if invalid message */
 	} else if ((self->_rx.len < len) || (self->_rx.data[0] != expec[0])) {
 
-	/* Everything is fine in any other case */
+		/* Everything is fine in any other case */
 	} else {
 		result = true;
 	}
@@ -188,8 +185,7 @@ bool _lcf_sr_validate_response(struct lcf_sr *self, uint8_t *expec, size_t len)
 {
 	bool result = false;
 
-	if (_lcf_sr_pre_validate_response(self, expec, len))
-	{
+	if (_lcf_sr_pre_validate_response(self, expec, len)) {
 		if (memcmp(self->_rx.data, expec, len) != 0) {
 			lcf_sr_abort(self, LCF_SR_STATUS_FAILED);
 		} else {
@@ -228,11 +224,11 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 	case LCF_SR_STATE_UDS_TESTER_PRESENT: {
 		uint8_t data[8] = {0x02u, 0x3Eu, 0x01u, 0xFFu,
 				   0xFFu, 0xFFu, 0xFFu, 0xFFu};
-		
+
 		_lcf_sr_push_tx(self, data, 8u);
 
 		self->_timeout_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_TESTER_PRESENT_RESPONSE;
+		self->_state	  = LCF_SR_STATE_UDS_TESTER_PRESENT_RESPONSE;
 		break;
 	}
 
@@ -264,7 +260,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		_lcf_sr_push_tx(self, data, 8u);
 
 		self->_timeout_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_SESSION_PRIVIL_RESPONSE;
+		self->_state	  = LCF_SR_STATE_UDS_SESSION_PRIVIL_RESPONSE;
 		break;
 	}
 
@@ -279,7 +275,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		}
 
 		self->_timer_ms = 0u;
-		self->_state    = LCF_SR_STATE_UDS_REQUEST_SECURITY;
+		self->_state	= LCF_SR_STATE_UDS_REQUEST_SECURITY;
 		break;
 	}
 
@@ -294,7 +290,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		_lcf_sr_push_tx(self, data, 8u);
 
 		self->_timeout_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_REQUEST_SECURITY_RESPONSE;
+		self->_state	  = LCF_SR_STATE_UDS_REQUEST_SECURITY_RESPONSE;
 		break;
 	}
 
@@ -304,16 +300,15 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 
 		self->_timeout_ms += delta_time_ms;
 
-		if (!_lcf_sr_pre_validate_response(self, expec, sizeof(expec)))
-		{
+		if (!_lcf_sr_pre_validate_response(self, expec,
+						   sizeof(expec))) {
 			break;
 		}
 
 		/* Receive challenge seed */
-		self->_incoming_challenge = (self->_rx.data[3] << 24u) |
-					    (self->_rx.data[4] << 16u) |
-					    (self->_rx.data[5] << 8u)  |
-					    (self->_rx.data[6] << 0u);
+		self->_incoming_challenge =
+		    (self->_rx.data[3] << 24u) | (self->_rx.data[4] << 16u) |
+		    (self->_rx.data[5] << 8u) | (self->_rx.data[6] << 0u);
 
 		_lcf_keygen_solve_battery_challenge(self->_incoming_challenge,
 						    self->_solved_challenge);
@@ -321,9 +316,8 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		self->_sn = 0; /* iso-tp consecutive frame sequence num */
 
 		self->_timer_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_SEND_SOLVED_CHALLENGE;
+		self->_state	= LCF_SR_STATE_UDS_SEND_SOLVED_CHALLENGE;
 		break;
-
 	}
 
 	case LCF_SR_STATE_UDS_SEND_SOLVED_CHALLENGE: {
@@ -361,7 +355,8 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 
 			/* Discard any RX at this point (FlowControl) */
 			self->_has_rx = false;
-		} else {}
+		} else {
+		}
 
 		self->_timeout_ms = 0u;
 		self->_state = LCF_SR_STATE_UDS_SEND_SOLVED_CHALLENGE_RESPONSE;
@@ -379,7 +374,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		}
 
 		self->_timer_ms = 0u;
-		self->_state    = LCF_SR_STATE_UDS_CALL_SERVICE0;
+		self->_state	= LCF_SR_STATE_UDS_CALL_SERVICE0;
 		break;
 	}
 
@@ -390,7 +385,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		_lcf_sr_push_tx(self, data, 8u);
 
 		self->_timeout_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_CALL_SERVICE0_RESPONSE;
+		self->_state	  = LCF_SR_STATE_UDS_CALL_SERVICE0_RESPONSE;
 		break;
 	}
 
@@ -405,7 +400,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		}
 
 		self->_timer_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_CALL_SERVICE1;
+		self->_state	= LCF_SR_STATE_UDS_CALL_SERVICE1;
 
 		break;
 	}
@@ -422,7 +417,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		_lcf_sr_push_tx(self, data, 8u);
 
 		self->_timeout_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_CALL_SERVICE1_RESPONSE;
+		self->_state	  = LCF_SR_STATE_UDS_CALL_SERVICE1_RESPONSE;
 		break;
 	}
 
@@ -437,7 +432,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		}
 
 		self->_timer_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_SESSION_DEFAULT;
+		self->_state	= LCF_SR_STATE_UDS_SESSION_DEFAULT;
 
 		break;
 	}
@@ -454,7 +449,7 @@ void _lcf_sr_step(struct lcf_sr *self, uint32_t delta_time_ms)
 		_lcf_sr_push_tx(self, data, 8u);
 
 		self->_timeout_ms = 0u;
-		self->_state = LCF_SR_STATE_UDS_SESSION_DEFAULT_RESPONSE;
+		self->_state	  = LCF_SR_STATE_UDS_SESSION_DEFAULT_RESPONSE;
 		break;
 	}
 

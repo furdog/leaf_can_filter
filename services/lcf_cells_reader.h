@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../lcf_common.h"
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -10,12 +11,18 @@
 #define LCF_CR_TX_ID 0x79Bu
 #define LCF_CR_RX_ID 0x7BBu
 #define LCF_CR_CELLS_COUNT 96u
+#define LCF_CR_RESPONSE_TIMEOUT_MS 5000u /* Max 5s timeout */
+
+enum lcf_cr_event {
+	LCF_CR_EVENT_NONE,
+	LCF_CR_EVENT_CELLS_READY,
+	LCF_CR_EVENT_TIMEOUT
+};
 
 enum lcf_cr_state {
 	LCF_CR_STATE_IDLE,
 	LCF_CR_STATE_SEND_REQUEST,
-	LCF_CR_STATE_GET_RESPONSE,
-	LCF_CR_STATE_FINAL
+	LCF_CR_STATE_GET_RESPONSE
 };
 
 /** Leaf Can Filter Cells Reader */
@@ -27,10 +34,12 @@ struct lcf_cr {
 	struct leaf_can_filter_frame _rx;
 	bool			     _has_rx;
 
-	uint8_t  _cells_idx;
-	uint16_t _cells_voltage_V[LCF_CR_CELLS_COUNT];
+	uint8_t	 _cells_idx;
+	uint16_t _cell_voltages_mV[LCF_CR_CELLS_COUNT];
 
 	uint8_t _group;
+
+	uint32_t _timer_ms;
 };
 
 void lcf_cr_init(struct lcf_cr *self)
@@ -42,12 +51,14 @@ void lcf_cr_init(struct lcf_cr *self)
 	self->_has_tx = false;
 	self->_has_rx = false;
 
-	self->_cells_idx       = 0u;
+	self->_cells_idx = 0u;
 	for (i = 0u; i < LCF_CR_CELLS_COUNT; i++) {
-		self->_cells_voltage_V[i] = 0u;
+		self->_cell_voltages_mV[i] = 0u;
 	}
 
 	self->_group = 0u;
+
+	self->_timer_ms = 0u;
 }
 
 void _lcf_cr_push_tx(struct lcf_cr *self, uint8_t *data, uint8_t len)
@@ -64,7 +75,7 @@ bool lcf_cr_push_rx_frame(struct lcf_cr *self, struct leaf_can_filter_frame *f)
 {
 	bool success = false;
 
-	if (!self->_has_rx && (f->id == LCF_CR_RX_ID)) {
+	if (!self->_has_rx) {
 		self->_has_rx = true;
 
 		self->_rx = *f;
@@ -93,63 +104,94 @@ bool lcf_cr_pop_tx_frame(struct lcf_cr *self, struct leaf_can_filter_frame *f)
 	return result;
 }
 
-void lcf_cr_parse_cells(struct lcf_cr *self)
+/** Start FSM to request cell voltages. (previous result is discarded) */
+void lcf_cr_start(struct lcf_cr *self)
 {
-	if (self->_rx.data[0] == 0x10) { /* First frame */
-		self->_cells_idx = 0u;
+	lcf_cr_init(self);
 
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[4] << 8u) | self->_rx.data[5];
-		self->_cells_idx++;
+	self->_state = LCF_CR_STATE_SEND_REQUEST;
+}
 
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[6] << 8u) | self->_rx.data[7];
-		self->_cells_idx++;
-	} else if ((self->_rx.data[6] == 0xFFu) &&
-		   (self->_rx.data[0] == 0x2Cu)) { /* Last frame */
-		self->_state = LCF_CR_STATE_FINAL;
-	} else if (self->_cells_idx >= LCF_CR_CELLS_COUNT) {
-		/* Check to prevent buffer overflow */
-	} else if ((self->_rx.data[0] % 2u) != 0u) { /* Odd frames */
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[1] << 8u) | self->_rx.data[2];
-		self->_cells_idx++;
+/** Stop FSM. (previous result is discarded) */
+void lcf_cr_stop(struct lcf_cr *self)
+{
+	lcf_cr_init(self);
 
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[3] << 8u) | self->_rx.data[4];
-		self->_cells_idx++;
+	self->_state = LCF_CR_STATE_IDLE;
+}
 
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[5] << 8u) | self->_rx.data[6];
-		self->_cells_idx++;
+/** Get pointer to cell voltages.
+ *  Returns NULL if invalid.
+ *  Always run this function before reading cell values.
+ *  TODO stricter access control to prevent use of invalid buffer */
+uint16_t *lcf_cr_get_cells_raw(struct lcf_cr *self)
+{
+	uint16_t *result = NULL;
 
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[7] << 8u);
-	} else { /* Even frames */
-		self->_cells_voltage_V[self->_cells_idx] |= self->_rx.data[1];
-		self->_cells_idx++;
+	if ((self->_cells_idx == LCF_CR_CELLS_COUNT) &&
+	    (self->_state == (uint8_t)LCF_CR_STATE_IDLE)) {
+		result = self->_cell_voltages_mV;
+	}
 
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[2] << 8u) | self->_rx.data[3];
-		self->_cells_idx++;
+	return result;
+}
 
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[4] << 8u) | self->_rx.data[5];
-		self->_cells_idx++;
+/** Parse and append data (uint16_t) from CAN message to cell data.
+ *  Specify HI and LO byte offsets within CAN message to parse */
+void _lcf_cr_append_cell(struct lcf_cr *self, uint8_t hi_ofs, uint8_t lo_ofs)
+{
+	assert(self && (hi_ofs < 8u) && (lo_ofs < 8u));
 
-		self->_cells_voltage_V[self->_cells_idx] =
-		    (self->_rx.data[6] << 8u) | self->_rx.data[7];
+	/* Always perform check to prevent buffer overflow */
+	if (self->_cells_idx < LCF_CR_CELLS_COUNT) {
+		self->_cell_voltages_mV[self->_cells_idx] =
+		    (self->_rx.data[hi_ofs] << 8u) | self->_rx.data[lo_ofs];
+
 		self->_cells_idx++;
 	}
 }
 
-void lcf_cr_step(struct lcf_cr *self)
+/** TODO parse raw buffer according to ISO-TP to simplify this routine */
+void lcf_cr_parse_cells(struct lcf_cr *self)
 {
-	switch (self->_state) {
-	case LCF_CR_STATE_IDLE:
-		break;
+	if (self->_rx.data[0] == 0x10u) { /* First frame */
+		self->_cells_idx = 0u;
+		_lcf_cr_append_cell(self, 4u, 5u);
+		_lcf_cr_append_cell(self, 6u, 7u);
+	} else if ((self->_cells_idx >= LCF_CR_CELLS_COUNT) &&
+		   (self->_rx.data[0] == 0x2Cu)) { /* Last frame */
+		self->_state = LCF_CR_STATE_IDLE;
+	} else if (self->_cells_idx >= LCF_CR_CELLS_COUNT) {
+		/* Check to prevent buffer overflow */
+	} else if ((self->_rx.data[0] % 2u) != 0u) { /* Odd frames */
+		_lcf_cr_append_cell(self, 1u, 2u);
+		_lcf_cr_append_cell(self, 3u, 4u);
+		_lcf_cr_append_cell(self, 5u, 6u);
 
-	case LCF_CR_STATE_SEND_REQUEST: {
+		/* Special case (partial write start) */
+		if (self->_cells_idx < LCF_CR_CELLS_COUNT) {
+			self->_cell_voltages_mV[self->_cells_idx] =
+			    (self->_rx.data[7] << 8u);
+		}
+	} else { /* Even frames */
+		/* Special case (partial write end) */
+		if (self->_cells_idx < LCF_CR_CELLS_COUNT) {
+			self->_cell_voltages_mV[self->_cells_idx] |=
+			    self->_rx.data[1];
+			self->_cells_idx++;
+		}
+
+		_lcf_cr_append_cell(self, 2u, 3u);
+		_lcf_cr_append_cell(self, 4u, 5u);
+		_lcf_cr_append_cell(self, 6u, 7u);
+	}
+}
+
+enum lcf_cr_event lcf_cr_step(struct lcf_cr *self, uint32_t delta_time_ms)
+{
+	enum lcf_cr_event ev = LCF_CR_EVENT_NONE;
+
+	if (self->_state == (uint8_t)LCF_CR_STATE_SEND_REQUEST) {
 		/* (Single Frame) UDS service request code 0x21, group 2
 		 * (cells) */
 		uint8_t data[8] = {0x02u, 0x21u, 0x02u, 0xFFu,
@@ -162,27 +204,29 @@ void lcf_cr_step(struct lcf_cr *self)
 
 		self->_state = LCF_CR_STATE_GET_RESPONSE;
 
-		break;
+		/* Clean state before listening */
+		self->_has_rx	= false;
+		self->_group	= 0u;
+		self->_timer_ms = 0u;
 	}
 
-	case LCF_CR_STATE_GET_RESPONSE: {
+	/* Check timeout */
+	if (self->_state == (uint8_t)LCF_CR_STATE_GET_RESPONSE) {
+		self->_timer_ms += delta_time_ms;
+
+		if (self->_timer_ms >= LCF_CR_RESPONSE_TIMEOUT_MS) {
+			ev = LCF_CR_EVENT_TIMEOUT;
+		}
+	}
+
+	/* If awaiting response, and have a rx, and len <= 8 and id match */
+	if ((self->_state == (uint8_t)LCF_CR_STATE_GET_RESPONSE) &&
+	    self->_has_rx && (self->_rx.len <= 8u) &&
+	    (self->_rx.id == LCF_CR_RX_ID)) {
 		/* (FlowControl) ContinueToSend: max 1 frame,
 		 * SeparationTime: 0ms */
 		uint8_t data[8] = {0x30u, 0x01u, 0x00u, 0xFFu,
 				   0xFFu, 0xFFu, 0xFFu, 0xFFu};
-
-		if (!self->_has_rx) {
-			break;
-		}
-
-		if (self->_rx.id != LCF_CR_RX_ID) {
-			self->_has_rx = false;
-			break;
-		}
-
-		if (self->_rx.len < 8u) {
-			break;
-		}
 
 		/* Extract group ID from first message */
 		if (self->_rx.data[0] == 0x10u) {
@@ -199,14 +243,13 @@ void lcf_cr_step(struct lcf_cr *self)
 		}
 
 		/* If state switched to final */
-		if (self->_state == (uint8_t)LCF_CR_STATE_FINAL) {
-			lcf_cr_init(self);
+		if (self->_state == (uint8_t)LCF_CR_STATE_IDLE) {
+			ev = LCF_CR_EVENT_CELLS_READY;
 		}
-
-		break;
 	}
 
-	default:
-		break;
-	}
+	/* Always Reset RX flag */
+	self->_has_rx = false;
+
+	return ev;
 }

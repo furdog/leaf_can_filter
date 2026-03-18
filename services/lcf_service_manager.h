@@ -1,5 +1,5 @@
-#include <lcf_soh_reset.h>
-#include <lcf_cells_reader.h>
+#include "lcf_cells_reader.h"
+#include "lcf_soh_reset.h"
 
 struct leaf_service_manager {
 	struct lcf_sr soh_rst_fsm;
