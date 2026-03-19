@@ -124,7 +124,7 @@ void lcf_cr_stop(struct lcf_cr *self)
  *  Returns NULL if invalid.
  *  Always run this function before reading cell values.
  *  TODO stricter access control to prevent use of invalid buffer */
-uint16_t *lcf_cr_get_cells_raw(struct lcf_cr *self)
+uint16_t *lcf_cr_get_cells_mV(struct lcf_cr *self)
 {
 	uint16_t *result = NULL;
 
