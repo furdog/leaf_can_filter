@@ -867,8 +867,8 @@ function status_widget_create(id, parent)
 		pane.temp.set_text(tr("LC_STATUS_BMS_TEMP")     + temp  + "C");
 		pane.max_in_kwt.set_text(tr("LC_STATUS_MAX_IN") + max_in + "kWt");
 		pane.max_chg_in_kwt.set_text(tr("LC_STATUS_MAX_CHG_IN") + chg_max_in + "kWt");
-		//pane.min_cell.set_text(tr("LC_STATUS_MIN_CELL") + min_cell + "V");
-		//pane.max_cell.set_text(tr("LC_STATUS_MAX_CELL") + max_cell + "V (d=" + parseFloat(max_cell - min_cell).toFixed(3) + ")");
+		pane.min_cell.set_text(tr("LC_STATUS_MIN_CELL") + min_cell + "V");
+		pane.max_cell.set_text(tr("LC_STATUS_MAX_CELL") + max_cell + "V (d=" + parseFloat(max_cell - min_cell).toFixed(3) + ")");
 	};
 
 	return pane;

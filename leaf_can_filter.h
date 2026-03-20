@@ -9,7 +9,12 @@
 
 /* Depend on struct leaf_can_filter_frame */
 #include "leafspy_can_filter.h"
-#include "leaf_soh_reset_fsm.h"
+
+#define LCF_LEAFSPY_MAX_INACTIVITY_TIME_MS 20000u
+
+/* Include various ISO-TP services */
+#include "lcf_soh_reset.h"
+#include "lcf_cells_reader.h"
 
 /******************************************************************************
  * Version sniffer to decide which vehicle version is used
@@ -146,6 +151,9 @@ struct leaf_bms_vars {
 	float charge_power_limit_kwt;
 	float max_power_for_charger_kwt;
 	float temperature_c;
+
+	uint16_t min_cell_mV;
+	uint16_t max_cell_mV;
 };
 
 void leaf_bms_vars_init(struct leaf_bms_vars *self)
@@ -164,6 +172,9 @@ void leaf_bms_vars_init(struct leaf_bms_vars *self)
 	self->charge_power_limit_kwt = 0.0f;
 	self->max_power_for_charger_kwt = 0.0f;
 	self->temperature_c = 0.0f;
+
+	self->min_cell_mV = 0u;
+	self->max_cell_mV = 0u;
 }
 
 /******************************************************************************
@@ -209,8 +220,13 @@ struct leaf_can_filter {
 	bool clim_ctl_fresh_air;
 	bool clim_ctl_btn_alert;
 
-	/* Soh reset FSM */
+	/* Leafspy monitoring */
+	bool     leafspy_activity_detected;
+	uint32_t leafspy_inactivity_timer_ms;
+
+	/* Various services */
 	struct lcf_sr soh_rst_fsm;
+	struct lcf_cr cells_r_fsm;
 };
 
 /******************************************************************************
@@ -647,6 +663,12 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 		self->settings.capacity_remaining_kwh =
 			chgc_get_remain_cap_kwh(&self->_chgc);
 
+		/*if (self->settings.ubercharge_enabled &&
+		    lcf_get_max_cell_voltage(self) < 4.18 && TODO) {*/
+			/* TODO block incoming frame and setup new settings manually */
+				/*
+		}*/
+
 		_leaf_can_filter_calc_crc8(frame);
 
 		break;
@@ -699,7 +721,7 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 						1u : 0u;
 
 		break;
-	
+
 	default:
 		break;
 	}
@@ -754,7 +776,61 @@ void leaf_can_filter_init(struct leaf_can_filter *self)
 	self->clim_ctl_fresh_air = false;
 	self->clim_ctl_btn_alert = false;
 
+	/* Leafspy monitoring */
+	self->leafspy_activity_detected   = false;
+	self->leafspy_inactivity_timer_ms = 0u;
+
+	/* Various services */
 	lcf_sr_init(&self->soh_rst_fsm);
+	lcf_cr_init(&self->cells_r_fsm);
+}
+
+/** Monitor leafspy status. Resets activity flag, if it was inactive for
+ *  LCF_LEAFSPY_MAX_INACTIVITY_TIME_MS time*/
+void leaf_can_filter_monitor_leafspy(struct leaf_can_filter *self,
+				     uint32_t delta_time_ms)
+{
+	if (self->leafspy_inactivity_timer_ms <
+	    LCF_LEAFSPY_MAX_INACTIVITY_TIME_MS) {
+		self->leafspy_inactivity_timer_ms += delta_time_ms;
+	} else {
+		self->leafspy_activity_detected = false;
+	}
+}
+
+/** This will push frame (to various services).
+ *  Returns true on success */
+bool leaf_can_filter_push_frame_to_services(struct leaf_can_filter *self,
+					   struct leaf_can_filter_frame *frame)
+{
+	bool success = false;
+
+	success = lcf_sr_push_frame(&self->soh_rst_fsm, frame);
+
+	return success;
+}
+
+/** This will pop generated frame (by various services).
+ *  Returns true if generated any frame */
+bool leaf_can_filter_pop_generated_frame(struct leaf_can_filter *self,
+					 struct leaf_can_filter_frame *frame)
+{
+	bool success = false;
+
+	if ((self->settings.bypass == false) &&
+	    !self->leafspy_activity_detected) {
+		success = lcf_sr_pop_frame(&self->soh_rst_fsm, frame);
+	}
+
+	return success;	
+}
+
+/** Update services (active polling and other stuff, mostly ISO-TP related) */
+void _leaf_can_filter_update_services(struct leaf_can_filter *self,
+				      uint32_t delta_time_ms)
+{
+	lcf_sr_step(&self->soh_rst_fsm, delta_time_ms);
+	lcf_cr_step(&self->cells_r_fsm, delta_time_ms);
 }
 
 void leaf_can_filter_process_frame(struct leaf_can_filter *self,
@@ -781,6 +857,14 @@ void leaf_can_filter_process_frame(struct leaf_can_filter *self,
 			self->lscfi.filter_leafspy_byte =
 				self->filter_leafspy_byte;
 		}
+
+		(void)leaf_can_filter_push_frame_to_services(self, frame);
+	}
+
+	/* Always try to detect leafspy activity */
+	if (frame->id == 0x79Bu) {
+		self->leafspy_activity_detected   = true;
+		self->leafspy_inactivity_timer_ms = 0u;
 	}
 }
 
@@ -790,9 +874,12 @@ void leaf_can_filter_update(struct leaf_can_filter *self,
 	/* Certain tasks should not be updated during bypass */
 	if (self->settings.bypass == false) {
 		_leaf_can_filter_update(self, delta_time_ms);
-		leaf_version_sniffer_step(&self->lvs, delta_time_ms);
-		lcf_sr_step(&self->soh_rst_fsm, delta_time_ms);
+		 leaf_version_sniffer_step(&self->lvs, delta_time_ms);
+		_leaf_can_filter_update_services(self, delta_time_ms);
 	}
+
+	/* Monitor leafspy activity */
+	leaf_can_filter_monitor_leafspy(self, delta_time_ms);
 }
 
 #endif /* LEAF_CAN_FILTER_GUARD */

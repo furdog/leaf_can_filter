@@ -130,21 +130,21 @@ void loop()
 		if (leaf_can_filter_hal_recv_frame(0, &frame)) {
 			leaf_can_filter_process_frame(&filter, &frame);
 			leaf_can_filter_hal_send_frame(1, &frame);
-
-			/* Other services */
-			lcf_sr_push_frame(&filter.soh_rst_fsm, &frame);
 		}
 
 		if (leaf_can_filter_hal_recv_frame(1, &frame)) {
 			leaf_can_filter_process_frame(&filter, &frame);
 			leaf_can_filter_hal_send_frame(0, &frame);
-
-			/* Other services */
-			lcf_sr_push_frame(&filter.soh_rst_fsm, &frame);
 		}
 
 		/* Other services */
-		if (lcf_sr_pop_frame(&filter.soh_rst_fsm, &frame)) {
+		/*if (lcf_sr_pop_frame(&filter.soh_rst_fsm, &frame)) {
+			leaf_can_filter_hal_send_frame(0, &frame);
+			leaf_can_filter_hal_send_frame(1, &frame);
+		}*/
+
+		/* Can filter can generate its own frames */
+		if (leaf_can_filter_pop_generated_frame(&filter, &frame)) {
 			leaf_can_filter_hal_send_frame(0, &frame);
 			leaf_can_filter_hal_send_frame(1, &frame);
 		}

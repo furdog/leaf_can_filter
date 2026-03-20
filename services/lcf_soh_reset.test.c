@@ -370,7 +370,14 @@ void lcf_sr_test_example_log(struct lcf_sr *self)
 	uint32_t timer_ms = 0u;
 
 	lcf_sr_init(self);
+
+	/* We should not be awake at this point */
+	assert(lcf_sr_is_awake(self) == false);
+
 	lcf_sr_start(self);
+
+	/* We be awake at this point */
+	assert(lcf_sr_is_awake(self) == true);
 
 	for (i = 0u; i < EXAMPLE_FRAMES_MAX; i++) {
 		uint32_t timestamp_s = (example_frames[i].timestamp_s * 1000);
@@ -399,6 +406,9 @@ void lcf_sr_test_example_log(struct lcf_sr *self)
 	}
 
 	assert(lcf_sr_get_status(self) == LCF_SR_STATUS_SUCCEED);
+
+	/* We should not be awake at this point */
+	assert(lcf_sr_is_awake(self) == false);
 }
 
 int main()

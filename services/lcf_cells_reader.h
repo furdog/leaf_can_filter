@@ -120,6 +120,12 @@ void lcf_cr_stop(struct lcf_cr *self)
 	self->_state = LCF_CR_STATE_IDLE;
 }
 
+/** The service has been awaken due to input and requires attention */
+bool lcf_cr_is_awake(struct lcf_cr *self)
+{
+	return self->_state != (uint8_t)LCF_CR_STATE_IDLE;
+}
+
 /** Get pointer to cell voltages.
  *  Returns NULL if invalid.
  *  Always run this function before reading cell values.
@@ -215,6 +221,8 @@ enum lcf_cr_event lcf_cr_step(struct lcf_cr *self, uint32_t delta_time_ms)
 		self->_timer_ms += delta_time_ms;
 
 		if (self->_timer_ms >= LCF_CR_RESPONSE_TIMEOUT_MS) {
+			lcf_cr_stop(self);
+
 			ev = LCF_CR_EVENT_TIMEOUT;
 		}
 	}

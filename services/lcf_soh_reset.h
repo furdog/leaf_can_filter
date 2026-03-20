@@ -154,6 +154,12 @@ void lcf_sr_abort(struct lcf_sr *self, uint8_t status)
 
 uint8_t lcf_sr_get_status(struct lcf_sr *self) { return self->_status; }
 
+/** The service has been awaken due to input and requires attention */
+bool lcf_sr_is_awake(struct lcf_sr *self)
+{
+	return self->_state != (uint8_t)LCF_SR_STATE_STOPPED;
+}
+
 /* Prevalidate (validate everything ecept payload) */
 bool _lcf_sr_pre_validate_response(struct lcf_sr *self, uint8_t *expec,
 				   size_t len)

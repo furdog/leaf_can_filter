@@ -328,10 +328,16 @@ void lcf_cr_test_example_log(struct lcf_cr *self)
 	cells_ptr = lcf_cr_get_cells_mV(self);
 	assert(cells_ptr == NULL);
 
+	/* We should still be awake at this point */
+	assert(lcf_cr_is_awake(self) == true);
+
 	/* Push one more frame to receive last one */
 	_lcf_cr_test_get_next_rx_frame(&f);
 	assert(lcf_cr_push_rx_frame(self, &f) == true);
 	assert(lcf_cr_step(self, 0u) == LCF_CR_EVENT_CELLS_READY);
+
+	/* After cells are ready, we're no longer awake */
+	assert(lcf_cr_is_awake(self) == false);
 
 	/* We must now have pointer to cells */
 	cells_ptr = lcf_cr_get_cells_mV(self);

@@ -16,8 +16,8 @@ export OTA_IP="7.7.7.7"
 
 export TARGET_NAME="LeafBOX"
 #export TARGET=leaf_can_filter_esp32c6_hw2
-export TARGET=leaf_can_filter_esp32c6_hw_zero
-#export TARGET=can_filter_v3_native_esp32c6
+#export TARGET=leaf_can_filter_esp32c6_hw_zero
+export TARGET=can_filter_v3_native_esp32c6
 export TARGET_LANG="uk-UA";
 #export TARGET_LANG="en-US";
 
@@ -121,6 +121,7 @@ compile() {
 	cp libraries/bite/bite.h                     build/
 	cp libraries/charge_counter/charge_counter.h build/
 	cp libraries/iso_tp/iso_tp.h                 build/
+	cp services/*.h                              build/
 
 	mk_web_interface ${TARGET_LANG}
 
