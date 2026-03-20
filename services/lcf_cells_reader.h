@@ -37,6 +37,9 @@ struct lcf_cr {
 	uint8_t	 _cells_idx;
 	uint16_t _cell_voltages_mV[LCF_CR_CELLS_COUNT];
 
+	uint16_t _min_cell_voltage_mV;
+	uint16_t _max_cell_voltage_mV;
+
 	uint8_t _group;
 
 	uint32_t _timer_ms;
@@ -55,6 +58,9 @@ void lcf_cr_init(struct lcf_cr *self)
 	for (i = 0u; i < LCF_CR_CELLS_COUNT; i++) {
 		self->_cell_voltages_mV[i] = 0u;
 	}
+
+	self->_min_cell_voltage_mV = (uint16_t)-1;
+	self->_max_cell_voltage_mV = 0u;
 
 	self->_group = 0u;
 
@@ -142,6 +148,37 @@ uint16_t *lcf_cr_get_cells_mV(struct lcf_cr *self)
 	return result;
 }
 
+/** Get min/max cell voltages. Returns true on success. */
+bool lcf_cr_get_cells_minmax_mV(struct lcf_cr *self, uint16_t *min_cell_mV,
+			 uint16_t *max_cell_mV)
+{
+	bool success = false;
+
+	if ((self->_cells_idx == LCF_CR_CELLS_COUNT) &&
+	    (self->_state == (uint8_t)LCF_CR_STATE_IDLE)) {
+		*min_cell_mV = self->_min_cell_voltage_mV;
+		*max_cell_mV = self->_max_cell_voltage_mV;
+
+		success = true;
+	}
+
+	return success;
+}
+
+/** Update min/max cell based on current _cells_idx value */
+void _lcf_cr_calc_minmax(struct lcf_cr *self)
+{
+	uint16_t voltage_mV = self->_cell_voltages_mV[self->_cells_idx];
+
+	if (voltage_mV > self->_max_cell_voltage_mV) {
+		self->_max_cell_voltage_mV = voltage_mV;
+	}
+
+	if (voltage_mV < self->_min_cell_voltage_mV) {
+		self->_min_cell_voltage_mV = voltage_mV;
+	}
+}
+
 /** Parse and append data (uint16_t) from CAN message to cell data.
  *  Specify HI and LO byte offsets within CAN message to parse */
 void _lcf_cr_append_cell(struct lcf_cr *self, uint8_t hi_ofs, uint8_t lo_ofs)
@@ -152,6 +189,8 @@ void _lcf_cr_append_cell(struct lcf_cr *self, uint8_t hi_ofs, uint8_t lo_ofs)
 	if (self->_cells_idx < LCF_CR_CELLS_COUNT) {
 		self->_cell_voltages_mV[self->_cells_idx] =
 		    (self->_rx.data[hi_ofs] << 8u) | self->_rx.data[lo_ofs];
+
+		_lcf_cr_calc_minmax(self);
 
 		self->_cells_idx++;
 	}
@@ -184,6 +223,9 @@ void lcf_cr_parse_cells(struct lcf_cr *self)
 		if (self->_cells_idx < LCF_CR_CELLS_COUNT) {
 			self->_cell_voltages_mV[self->_cells_idx] |=
 			    self->_rx.data[1];
+
+			_lcf_cr_calc_minmax(self);
+
 			self->_cells_idx++;
 		}
 

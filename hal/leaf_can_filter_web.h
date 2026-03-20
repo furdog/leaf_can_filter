@@ -115,6 +115,14 @@ void leaf_can_filter_web_send_initial_msg(struct leaf_can_filter *self)
 	narr2.add(self->_bms_vars.charge_power_limit_kwt);
 	narr2.add(self->_bms_vars.max_power_for_charger_kwt);
 
+	uint16_t min_cell_mV = 0u;
+	uint16_t max_cell_mV = 0u;
+
+	if (lcf_cr_get_cells_minmax_mV(&self->srvmng.cells_r_fsm, &min_cell_mV, &max_cell_mV)) {
+		narr2.add((float)min_cell_mV / 1000.0f);
+		narr2.add((float)max_cell_mV / 1000.0f);
+	}
+
 	narr = array.add<JsonArray>();
 	narr.add(LEAF_CAN_FILTER_WEB_MSG_TYPE_CAPACITY_OVERRIDE_EN);
 	narr.add(self->settings.capacity_override_enabled);
@@ -145,7 +153,7 @@ void leaf_can_filter_web_send_initial_msg(struct leaf_can_filter *self)
 
 	narr = array.add<JsonArray>();
 	narr.add(LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET_STAT);
-	narr.add(lcf_sr_get_status(&self->soh_rst_fsm));
+	narr.add(lcf_sr_get_status(&self->srvmng.soh_rst_fsm));
 
 	serializeJson(array, serialized);
 	web_socket.textAll(serialized.c_str());
@@ -237,7 +245,7 @@ void leaf_can_filter_web_recv_msg(struct leaf_can_filter *self,
 
 	case LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET:
 		/* Start SOH reset FSM */
-		lcf_sr_start(&self->soh_rst_fsm);
+		lcf_sr_start(&self->srvmng.soh_rst_fsm);
 		return;
 
 	case LEAF_CAN_FILTER_WEB_MSG_TYPE_SOC_RESET:

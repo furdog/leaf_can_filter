@@ -328,6 +328,8 @@ void lcf_cr_test_example_log(struct lcf_cr *self)
 	cells_ptr = lcf_cr_get_cells_mV(self);
 	assert(cells_ptr == NULL);
 
+	assert(lcf_cr_get_cells_minmax_mV(self, NULL, NULL) == false);
+
 	/* We should still be awake at this point */
 	assert(lcf_cr_is_awake(self) == true);
 
@@ -345,6 +347,18 @@ void lcf_cr_test_example_log(struct lcf_cr *self)
 
 	for (i = 0; i < LCF_CR_CELLS_COUNT; i++) {
 		printf("self->_cell_voltages_mV[%u]: %u\n", i, cells_ptr[i]);
+	}
+
+	{
+		uint16_t min_cell_mV = 0u;
+		uint16_t max_cell_mV = 0u;
+
+		assert(lcf_cr_get_cells_minmax_mV(self, &min_cell_mV, &max_cell_mV) == true);
+		assert(min_cell_mV == 4037);
+		assert(max_cell_mV == 4052);
+
+		printf("min_cell_mV: %f\n", (float)min_cell_mV / 1000.0f);
+		printf("max_cell_mV: %f\n", (float)max_cell_mV / 1000.0f);
 	}
 
 	assert(cells_ptr[95] == 4044u);

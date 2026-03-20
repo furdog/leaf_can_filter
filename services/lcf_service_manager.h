@@ -49,6 +49,9 @@ bool lcf_service_manager_push_frame(struct lcf_service_manager	 *self,
 	if (frame->id == 0x79Bu) {
 		self->leafspy_activity_detected	  = true;
 		self->leafspy_inactivity_timer_ms = 0u;
+
+		/* Every iso-tp routine should be stopped */
+		self->_iso_tp_srv_state = 3u;
 	}
 
 	if (lcf_cr_push_rx_frame(&self->cells_r_fsm, frame)) {
