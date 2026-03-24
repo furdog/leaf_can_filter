@@ -9,6 +9,9 @@
 /** How long LeafSpy not be present on the bus to be considered inactive */
 #define LCF_LEAFSPY_MAX_INACTIVITY_TIME_MS 10000u
 
+/** If we have any active web clients */
+extern volatile bool leaf_can_filter_web_has_active_clients;
+
 struct lcf_service_manager {
 	uint8_t _iso_tp_srv_state; /* Manages iso_tp services */
 
@@ -155,6 +158,8 @@ void lcf_service_manager_update(struct lcf_service_manager *self,
 	} else {
 		self->_cells_read_timer_ms = 0u;
 
-		lcf_cr_start(&self->cells_r_fsm);
+		if (leaf_can_filter_web_has_active_clients) {
+			lcf_cr_start(&self->cells_r_fsm);
+		}
 	}
 }

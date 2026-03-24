@@ -465,6 +465,7 @@ void leaf_can_filter_web_stop()
 }
 
 extern TaskHandle_t xWebTaskHandle;
+volatile bool leaf_can_filter_web_has_active_clients = false;
 
 void leaf_can_filter_web_update(struct leaf_can_filter *self,
 				uint32_t delta_time_ms)
@@ -482,8 +483,10 @@ void leaf_can_filter_web_update(struct leaf_can_filter *self,
 		repeat_ms = 1000;
 
 		if (WiFi.softAPgetStationNum() <= 0) {
+			leaf_can_filter_web_has_active_clients = false;
 			wifi_stop_timer++;
 		} else {
+			leaf_can_filter_web_has_active_clients = true;
 			wifi_stop_timer = 0u;
 		}
 
