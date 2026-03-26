@@ -5,6 +5,17 @@ if [ -z "${GIT_REPO_VERSION+x}" ]; then
 	export GIT_REPO_VERSION=$(git describe --tags)
 fi
 
+# 2. Get the branch (e.g., test/name)
+raw_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# 3. Replace / with - and export (e.g., test-name)
+export GIT_REPO_BRANCH=${raw_branch//\//-}
+
+# 4. Combine them into your final name
+export FULL_BUILD_NAME="${GIT_REPO_VERSION}-${GIT_REPO_BRANCH}"
+
+echo $FULL_BUILD_NAME
+
 ###############################################################################
 # CONFIGURATION:
 ###############################################################################
@@ -28,19 +39,19 @@ export TARGET_LANG="uk-UA";
 ###############################################################################
 
 if [ "$TARGET" == "leaf_can_filter_esp32c6_hw2" ]; then
-	export __CAN_FILTER_VERSION__="h2_$GIT_REPO_VERSION"
+	export __CAN_FILTER_VERSION__="h2_$FULL_BUILD_NAME"
 
 	BOARD=esp32:esp32:esp32c6
 	FQBN=:CDCOnBoot=cdc
 	echo "#define CAN_FILTER_ESP32C6_SUPER_MINI" > target.gen.h
 elif [ "$TARGET" == "leaf_can_filter_esp32c6_hw_zero" ]; then
-	export __CAN_FILTER_VERSION__="hz_$GIT_REPO_VERSION"
+	export __CAN_FILTER_VERSION__="hz_$FULL_BUILD_NAME"
 
 	BOARD=esp32:esp32:esp32c6
 	FQBN=:CDCOnBoot=cdc
 	echo "#define CAN_FILTER_ESP32C6_ZERO" > target.gen.h
 elif [ "$TARGET" == "can_filter_v3_native_esp32c6" ]; then
-	export __CAN_FILTER_VERSION__="h3_$GIT_REPO_VERSION"
+	export __CAN_FILTER_VERSION__="h3_$FULL_BUILD_NAME"
 
 	BOARD=esp32:esp32:esp32c6
 	FQBN=:CDCOnBoot=cdc
