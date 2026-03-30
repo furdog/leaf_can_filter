@@ -20,10 +20,7 @@
   "LC_FILTER_LEAFSPY": "Filter LeafSpy messages",
   "LC_SET_CAPACITY_KWH": "Manual capacity setting (kWh)",
   "LC_SET_FULL_VOLTAGE": "Full charge voltage",
-  "LC_SOH_MULTIPLIER": "SOH Multiplier setting (0.0 - 3.0)",
   "LC_BMS_VERSION_SET": "BMS Version (0 = auto)",
-  "LC_RESET_SOH_TITLE": "Reset SOH",
-  "LC_RESET_SOH_WARNING": "Warning: all diagnostics must be disabled!",
   "LC_CONFIRM_YES": "Yes",
   "LC_CONFIRM_NO": "No",
   "LC_WIFI_OFF_TITLE": "Disable Wi-Fi",
@@ -32,12 +29,38 @@
   "LC_REBOOT_CONFIRM": "Do you want to reboot the device?",
   "LC_FIRMWARE_UPDATE_TITLE": "Firmware Update",
   "LC_FIRMWARE_CONFIRM_BTN": "Confirm",
+
+  "LC_SOC_CONTROL": "State Of Charge control",
   "LC_RESET_SOC_TITLE": "Reset SOC to 100%",
   "LC_RESET_SOC_CONFIRM": "This option will reset SOC(manually set) to 100%",
+  "LC_SET_SOC_TITLE": "Set SOC manually",
+  "LC_SET_SOC_DESC": "This option exists to set vehicle remaining SOC manually",
+
+  "LC_SOH_CONTROL": "State Of Health control",
+  "LC_SOH_MULTIPLIER": "SOH Multiplier setting (0.0 - 3.0)",
+  "LC_RESET_SOH_TITLE": "Reset SOH",
+  "LC_RESET_SOH_WARNING": "Warning: all diagnostics must be disabled!",
 
   "LC_STATUS_BMS_TEMP": "BMS Temp.: ",
   "LC_STATUS_MAX_IN": "Max. input: ",
   "LC_STATUS_MAX_CHG_IN": "Max. charge: ",
   "LC_STATUS_MIN_CELL": "Min. cell: ",
-  "LC_STATUS_MAX_CELL": "Max. cell: "
+  "LC_STATUS_MAX_CELL": "Max. cell: ",
+
+  "LC_HINT_DIALOG_TITLE": "HINT",
+  "LC_HINT_DIALOG_BUTTON": "Understood...",
+  "LC_HINT_STATUS": "Real time telemetry from the vehicle. Displays real-time Battery Management System (BMS) data, including voltage, current, and temperature directly from the CAN bus.",
+  "LC_HINT_BYPASS": "Enables transparent mode. The filter will stop modifying CAN messages and pass all data through original state. Useful for diagnostic pass-through.",
+  "LC_HINT_FILTER_LEAFSPY": "Prevents LeafSpy or other OBDII scanners from detecting the filter's modifications, ensuring the app sees the data exactly how you've configured it. (EXPERIMENTAL)",
+  "LC_HINT_BMS_VERSION_SETTER": "Emulates a specific BMS firmware version. Use 'Auto' for default behavior or select a specific version to ensure compatibility with aftermarket battery upgrades.",
+  "LC_HINT_MANUAL_CAP_ENABLED": "Toggles the manual override system. When active, the filter will report your custom capacity settings to the vehicle instead of the actual battery values. In this mode CAN filter works as energy counter",
+  "LC_HINT_MANUAL_CAP_OVERRIDE": "Sets the specific battery capacity (kWh) to be reported to the car's LBC. This allows you to 'trick' the range estimator or clear 'turtle mode' on degraded packs.",
+  "LC_HINT_MANUAL_CAP_FULL_VOLT": "Defines the voltage threshold at which the battery is considered 100% full. Adjust this to calibrate the SOC display for different cell chemistries.",
+  "LC_HINT_SOC_CTL": "State of Charge (SOC) Management. Allows you to manually offset or reset the reported battery percentage to match the actual energy remaining.",
+  "LC_HINT_SOH_CTL": "State of Health (SOH) Calibration. Use this to adjust the reported health percentage and 'Bars' on the dashboard to reflect your battery's true condition. SOH reset request may be sent to BMS (disable any diagnostics tools to succeed)",
+  "LC_HINT_WIFI_OFF": "Disables the internal Wi-Fi Access Point. This reduces power consumption and radio interference. You will need to hardware-reset the device to re-enable Wi-Fi. You can also perform soft reset by pressing recirculation button (HVAC) 20 times",
+  "LC_HINT_REBOOT": "Performs a soft reset of the filter module. Use this if the interface becomes unresponsive. You can also perform soft reset by pressing recirculation button (HVAC) 20 times",
+  "LC_HINT_FW_UPDATE": "Displays current firmware version. It also allows you to upload new .bin files to improve filter logic or add support for new vehicle models. More firmware can be found on <a href=\"https://github.com/furdog\">https://github.com/furdog</a>",
+
+  "LC_LAST_ELEMENT": ""
 }

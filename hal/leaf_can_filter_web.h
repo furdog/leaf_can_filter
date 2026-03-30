@@ -64,6 +64,7 @@ enum leaf_can_filter_web_msg_type {
 	LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET_STAT,
 
 	LEAF_CAN_FILTER_WEB_MSG_TYPE_SOC_RESET,
+	LEAF_CAN_FILTER_WEB_MSG_TYPE_SET_SOC,
 
 	LEAF_CAN_FILTER_WEB_MSG_MAX
 };
@@ -246,6 +247,13 @@ void leaf_can_filter_web_recv_msg(struct leaf_can_filter *self,
 					 chgc_get_full_cap_kwh(&self->_chgc));
 		leaf_can_filter_fs_save(self);
 		return;
+
+	case LEAF_CAN_FILTER_WEB_MSG_TYPE_SET_SOC: {
+		float SOC = value.as<float>() / 100.0f;
+		chgc_set_initial_cap_kwh(&self->_chgc, chgc_get_full_cap_kwh(&self->_chgc) * SOC);
+		leaf_can_filter_fs_save(self);
+		return;
+	}
 
 	default:
 		break;

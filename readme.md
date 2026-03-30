@@ -49,7 +49,9 @@ MSB -> 35,     36: (uint16_t)ah /* in LeafSpy */
 * ~~auto disable WiFi~~
 * ~~enable WiFi by key sequence~~
 * ~~English version of UI~~
+* add filesystem checksum
+* ~~add hints button~~
 
-**Completion: 9/19**
+**Completion: 10/21**
 
 ---

@@ -18,6 +18,14 @@
 	user-select: none;
 }
 
+/* This style is applied to everything.
+   It primarily helps hint tool to draw elements correctly
+   And just makes element sizing more consistent.
+   TODO global styles should not be used */
+/* *, *::before, *::after {
+  box-sizing: border-box;
+}*/
+
 html {
     -ms-touch-action: manipulation;
         touch-action: manipulation;
@@ -29,6 +37,8 @@ body {
 	background: linear-gradient(45deg, black, rgb(32, 75, 80));
 	background-attachment: fixed;
 	background: rgb(45, 45, 45);
+	margin: 0;
+	//background: linear-gradient(45deg, blue, yellow)
 }
 
 .lay {
@@ -41,7 +51,7 @@ body {
 }
 
 .pane {
-	animation: 1s ease-out 0s 1 slide_left;
+	//animation: 1s ease-out 0s 1 slide_left;
 	flex: 1 1 0em;
 	border-radius: 1em;
 	background: rgb(15, 15, 15);
@@ -59,7 +69,7 @@ body {
 .pane_text {
 	text-wrap: auto;
 	padding: 0.2em;
-	font-size: 1.5em;
+	font-size: 1.25em;
 }
 
 .pane_tool {
@@ -151,11 +161,287 @@ body {
 		transform: rotate(360deg);
 	}
 }
+
+.is-disabled {
+	filter: grayscale(100%);
+	opacity: 0.6;
+    
+	pointer-events: none; 
+    
+	cursor: not-allowed;
+}
+
+@keyframes hint_anim {
+	0% {
+		transform: rotateY(0deg) translateY(0px);
+		filter: drop-shadow(2px 4px 6px orange);
+	}
+	50% {
+		transform: rotateY(0deg) translateY(-5px);
+		filter: drop-shadow(0px 0px 0px orange);
+	}
+	100% {
+		transform: rotateY(0deg) translateY(0px);
+		filter: drop-shadow(2px 4px 6px orange);
+	}
+}
+
+.hint_style {
+	animation-name: hint_anim;
+	animation-iteration-count: infinite;
+	animation-duration: 2s;
+	animation-timing-function: linear;
+}
+
 </style>
 </head>
 
 <body>
 </body>
+
+<script>
+/******************************************************************************
+ * GLOBAL OVERLAY WIDGET
+ *****************************************************************************/
+</script>
+<style>
+.overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+
+	backdrop-filter: blur(10px) sepia(1) brightness(0.5);
+
+	/* Default animation for fade-in */
+	animation: overlay_fade_in 0.3s ease-out forwards;
+}
+
+.overlay_bg {
+	background: rgb(0 0 0 / 30%);
+}
+
+/* Class to apply for fade-out animation */
+.overlay_fade_out {
+	animation: overlay_fade_out 0.3s ease-in forwards;
+}
+
+/* Keyframes for fade-in animation */
+@keyframes overlay_fade_in {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+/* Keyframes for fade-out animation */
+@keyframes overlay_fade_out {
+	0% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+</style>
+<script>
+function lw_dash_overlay(parent) {
+	/* Overlay element */
+	const overlay_e = document.createElement('div');
+
+	overlay_e.className = 'overlay overlay_bg'; 
+
+	/* Append the overlay to parent */
+	parent.appendChild(overlay_e);
+
+	/* Remove with animation */
+	function remove() {		
+		/* Add the fade-out animation class */
+		overlay_e.classList.add('overlay_fade_out');
+
+		/* Listen for the animation end event */
+		overlay_e.addEventListener('animationend', function handler() {
+			if (overlay_e.parentNode) {
+				overlay_e.parentNode.removeChild(overlay_e);
+			}
+
+			/* Remove the event listener to prevent memory leaks */
+			overlay_e.removeEventListener('animationend', handler);
+		});
+	}
+
+	return {
+		self: overlay_e,
+
+		/* methods */
+		remove: remove
+	}
+}
+
+</script>
+
+<script>
+/******************************************************************************
+ * GLOBAL HINT TOOL
+ *****************************************************************************/
+</script>
+<style>
+@keyframes hint_initial_scale {
+	0% {
+		transform: scale(1);
+	}
+	100% {
+		transform: scale(0.75);
+	}
+}
+
+.hint {
+	box-shadow: 0 0 1em rgba(32, 255, 0, 0.8);
+
+	transform: scale(0.75);
+
+	/* Apply the initial scaling animation */
+	animation: hint_initial_scale 0.5s ease-out 0s;
+
+	/* For hover: Transition properties for smooth changes */
+	transition: box-shadow 0.5s ease-in-out, transform 0.3s ease-out;
+}
+
+.hint:hover {
+	transform: scale(1.0);
+	box-shadow: 0 0 1.5em rgba(32, 255, 0, 1);
+}
+</style>
+<script>
+let lw_dash_hint_mode = false;
+
+/** Creates a cloned element which mimics original element
+    appearence and position, but lies within another parent.
+    The original element is hidden unless delete() method is called.
+    The impostor element is not linked with the original, thus any
+    updates won't be transfered after one has been created. */
+function lw_dash_hint_mode_impostor(element, parent) {
+	/* 1. Store original visibility style to restore later */
+	const original_visibility = element.style.visibility;
+
+	/* 2. Clone the original element (deep clone to include children) */
+	const cloned = element.cloneNode(true);
+
+	/* 3. Hide the original element (preserving its space in the layout) */
+	element.style.visibility = 'hidden';
+
+	/* 4. Remove any ID to prevent duplicate IDs in the DOM */
+	cloned.removeAttribute('id');
+
+	/* 5. Append the clone to the specified target parent */
+	parent.appendChild(cloned);
+
+	/* 6. Track original element position */
+	const position_tracker = setInterval(function() {
+		const rect = element.getBoundingClientRect();
+		cloned.style.top = rect.top + 'px';
+		cloned.style.left = rect.left + 'px';
+
+		cloned.style.position  = 'fixed';
+		cloned.style.width  = `${rect.width}px`;
+		cloned.style.height = `${rect.height}px`;
+		cloned.style.margin = 0;
+	}, 0);
+
+
+	/* 7. Return an object with the remove and a reference to the clone */
+	return {
+		remove: function() {
+			cloned.parentNode.removeChild(cloned);
+	
+			/* Restore the original element's visibility */
+			element.style.visibility = original_visibility;
+
+			/* Stop position tracker */
+			clearInterval(position_tracker);
+		},
+	
+		self: cloned
+	};
+}
+
+function lw_dash_hint_mode_enter(parent)
+{
+	lw_dash_hint_mode = true;
+
+	const items = document.querySelectorAll('[data-hint]');
+
+	/* Create impostor for each item */
+	items.forEach(item => {
+		item.impostor = lw_dash_hint_mode_impostor(item, parent);
+		item.impostor.self.onclick  = item.hint_click_action;
+		item.impostor.self.classList.add('hint');
+
+		/* Impostor should not have hint property
+		   This prevents from false enumeration when removing hints */
+		delete item.impostor.self.dataset.hint;
+	});
+}
+
+function lw_dash_hint_mode_exit()
+{
+	lw_dash_hint_mode = false;
+
+	const items = document.querySelectorAll('[data-hint]');
+
+	/* Remove all impostors */	
+	items.forEach((item, index) => {
+		item.impostor.remove();
+		delete item.impostor;
+	});
+}
+
+function lw_dash_hint_mode_toggle() {
+	if (!lw_dash_hint_mode)
+		lw_dash_hint_mode_enter();
+	else
+		lw_dash_hint_mode_exit();
+}
+
+function lw_dash_hint_create(element, click_action)
+{	
+	element.hint_click_action = click_action;
+	element.dataset.hint = "";
+}
+
+function lw_dash_hint_button_create(parent)
+{
+	const hint_button  = document.createElement('div');
+	hint_button.className = 'text';
+	hint_button.textContent = "HINTS";
+	parent.appendChild(hint_button);
+
+	hint_button.onclick = function() {
+		if (!lw_dash_hint_mode) {
+			hint_overlay = lw_dash_overlay(document.body);
+
+			lw_dash_hint_mode_enter(hint_overlay.self);
+
+			hint_button_impostor =
+				lw_dash_hint_mode_impostor(hint_button,
+							   hint_overlay.self);
+
+			hint_button_impostor.self.onclick = function() { 
+				lw_dash_hint_mode_exit();
+				hint_overlay.remove();
+				hint_button_impostor.remove();
+			};
+		} else {
+			hint_button_impostor.self.onclick();
+		}
+	}
+
+	return hint_button;
+}
+</script>
 
 <script>
 /******************************************************************************
@@ -719,35 +1005,53 @@ function paned_checkbox_create(id, parent, caption)
 	return pane;
 };
 
-/* ACTION APPLIER */
-function action_applier_create(id, parent, caption, toolbar, confirmation_text)
+function applier_button_create(id, parent, caption, description)
 {
-	const pane = pane_create(parent);
-	const stop = button_create(pane);
-
-	pane.text.set_text(tr(caption));
+	const button = button_create(parent);
 	
-	pane.toolbar.set_text(toolbar);
-	pane.toolbar.set_size(3);
-	
-	stop.set_text(tr(caption));
+	button.set_text(tr(caption));
 
-	stop.click_actions.show_dialog = function() {
+	button.click_actions.show_dialog = function() {
+
 		const popup = popup_create(document.body);
-		const yes   = button_create(popup.content);
-		const no    = button_create(popup.content);
+		popup.text.set_text(tr(caption));
+		popup.content.set_direction('v');
 
-		popup.text.set_text(tr(confirmation_text));
-		popup.content.style.flexWrap = 'nowrap';
+		popup.content.set_text(tr(description));
+		popup.content.style.textWrap = "auto";
+		popup.content.set_text(tr(description));
 
+		const buttons = container_create(popup.content);
+		buttons.set_direction('h');
+		buttons.style.width = '100%';
+		buttons.style.flexFlow = 'row';
+
+		const yes   = button_create(buttons);
 		net.add_listener(yes, id);
 		yes.set_text(tr('LC_CONFIRM_YES'));
 		yes.click_actions.click = function() { popup.remove() };
 		yes.click_actions.send	= function() { yes.net.send() };
 
+		const no    = button_create(buttons);
 		no.set_text(tr('LC_CONFIRM_NO'));
 		no.click_actions.click = function() { popup.remove() };
 	};
+
+	return button;
+}
+
+/* ACTION APPLIER */
+function action_applier_create(id, parent, caption, toolbar, description)
+{
+	const pane = pane_create(parent);
+	const button = applier_button_create(id, pane.content, caption, description);
+
+	pane.text.set_text(tr(caption));
+	
+	pane.toolbar.set_text(toolbar);
+	pane.toolbar.set_size(2);
+
+	pane.button = button;
 
 	return pane;
 };
@@ -794,11 +1098,52 @@ const LEAF_CAN_FILTER_WEB_MSG_TYPE_BMS_VER                 = 11;
 const LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET               = 12;
 const LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET_STAT          = 13;
 const LEAF_CAN_FILTER_WEB_MSG_RESET_SOC			   = 14;
+const LEAF_CAN_FILTER_WEB_MSG_SET_SOC			   = 15;
 
-function status_widget_create(id, parent)
+/*------------------------------------------ Floating Speech Balloon (HINTS) */
+function hints_button_create() {
+	const a = container_create(document.body);
+	a.set_direction('v');
+	a.style.position = "fixed";
+	a.style.top = "1em";
+	a.style.right = "1em";
+	a.classList.add("hint_style");
+
+	const hints_button = lw_dash_hint_button_create(a);
+	
+	hints_button.innerHTML = "&#128172"
+	hints_button.style.padding = 0;
+	hints_button.style.fontSize = "2em";
+	
+
+	return hints_button;
+}
+
+hints_button = hints_button_create();
+
+function register_hint_dialog(parent, hint) {
+	lw_dash_hint_create(parent, function() {
+		const popup = popup_create(document.body);
+		popup.text.set_text(tr("LC_HINT_DIALOG_TITLE"));
+		popup.content.set_direction('v');
+
+		const hint_cont = container_create(popup.content);
+		hint_cont.innerHTML = hint;
+		hint_cont.style.textWrap = "auto";
+
+		const ok = button_create(popup.content);
+
+		ok.set_text(tr("LC_HINT_DIALOG_BUTTON"));
+		ok.click_actions.click = function() { popup.remove(); hints_button.onclick() };
+	});
+}
+
+/*------------------------------------------------------ Declare all widgets */
+function status_widget_create(parent)
 {
 	const pane = pane_create(parent);
 	pane.text.set_text(tr('LC_STATUS_TITLE'));
+	register_hint_dialog(pane, tr("LC_HINT_STATUS"));
 
 	/* Central subcontainer */
 	const s	= container_create(pane);
@@ -839,9 +1184,9 @@ function status_widget_create(id, parent)
 	//pane.time_left	   = text_create(r);
 
 	pane.soc = text_create(pane);
-	pane.soc.set_size(1.5);
+	pane.soc.set_size(1.25);
 
-	net.add_listener(pane, id);
+	net.add_listener(pane, LEAF_CAN_FILTER_WEB_MSG_TYPE_STATUS);
 
 	pane.net.recv = function(data) {
 		const [voltage, current, full_cap, cap, version, soh,
@@ -874,9 +1219,151 @@ function status_widget_create(id, parent)
 	return pane;
 };
 
+function bypass_create(parent) {
+	const e = paned_checkbox_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_BYPASS_EN, parent,
+			      'LC_BYPASS_FILTER');
+
+	register_hint_dialog(e, tr("LC_HINT_BYPASS"));
+}
+
+
+function filter_leafspy_create(parent) {
+	const e = paned_checkbox_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_FILTER_LEAFSPY, parent,
+			      'LC_FILTER_LEAFSPY');
+
+	register_hint_dialog(e, tr("LC_HINT_FILTER_LEAFSPY"));
+}
+
+function version_setter_create(parent) {
+	const e = paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_BMS_VER, parent, 0.0, 3.0, 1.0,
+			       'LC_BMS_VERSION_SET');
+
+	register_hint_dialog(e, tr("LC_HINT_BMS_VERSION_SETTER"));
+}
+
+function capacity_panel_create(parent)
+{
+	const pane = pane_create(parent);
+	pane.text.set_text(tr('LC_MANUAL_CAPACITY_EN'));
+
+	register_hint_dialog(pane.caption, tr("LC_HINT_MANUAL_CAP_ENABLED"));
+
+	const checkbox = checkbox_create(pane.caption);
+
+	net.add_listener(checkbox, LEAF_CAN_FILTER_WEB_MSG_TYPE_CAPACITY_OVERRIDE_EN);
+
+	pane.content.classList.toggle('is-disabled', !checkbox.state);
+
+	checkbox.click_actions.send = function() {
+		pane.content.classList.toggle('is-disabled', !checkbox.state);
+		checkbox.net.send(checkbox.state ? 1 : 0)
+	};
+
+	checkbox.net.recv = function(data) {
+		pane.content.classList.toggle('is-disabled', !checkbox.state);
+		checkbox.set_state(JSON.parse(data));
+	}
+
+	const override = paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_CAPACITY_OVERRIDE_KWH, pane.content, 4, 80, 4,
+			       'LC_SET_CAPACITY_KWH');
+	register_hint_dialog(override, tr("LC_HINT_MANUAL_CAP_OVERRIDE"));
+
+	const full_volt = paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_CAPACITY_FULL_VOLTAGE_V, pane.content, 350, 450, 4,
+			       'LC_SET_FULL_VOLTAGE');
+	register_hint_dialog(full_volt, tr("LC_HINT_MANUAL_CAP_FULL_VOLT"));
+
+	const soc_control = soc_control_panel_create(LEAF_CAN_FILTER_WEB_MSG_SET_SOC, pane.content, 'LC_SOC_CONTROL', '&#128267');
+	register_hint_dialog(soc_control, tr("LC_HINT_SOC_CTL"));
+
+	return pane;
+}
+
+function soc_control_panel_create(id, parent, caption, toolbar)
+{
+	const pane = pane_create(parent);
+
+	pane.text.set_text(tr(caption));
+	pane.toolbar.set_text(toolbar);
+	pane.toolbar.set_size(2);
+
+	/* Set soc to 100% */
+	const soc_rst = applier_button_create(LEAF_CAN_FILTER_WEB_MSG_RESET_SOC, pane.content, 'LC_RESET_SOC_TITLE', 'LC_RESET_SOC_CONFIRM');
+
+	/* Manual soc reset button */
+	const button = button_create(pane.content);
+	button.set_text(tr('LC_SET_SOC_TITLE'));
+
+	button.click_actions.show_dialog = function() {
+		const popup = popup_create(document.body);
+		popup.text.set_text(tr('LC_SET_SOC_TITLE'));
+		popup.content.set_direction('v');
+
+		popup.content.set_text(tr('LC_SET_SOC_DESC'));
+		popup.content.style.textWrap = "auto";
+
+		const regulator = regulator_create(popup.content);
+		regulator.set_min(0);
+		regulator.set_max(100);
+		regulator.set_step(5);
+		regulator.set_value(50);
+
+		const buttons = container_create(popup.content);
+		buttons.set_direction('h');
+		buttons.style.width = '100%';
+		buttons.style.flexFlow = 'row';
+
+		const yes   = button_create(buttons);
+		const no    = button_create(buttons);
+
+		net.add_listener(yes, id);
+		yes.set_text(tr('LC_CONFIRM_YES'));
+		yes.click_actions.click = function() { popup.remove() };
+		yes.click_actions.send	= function() { yes.net.send(regulator.get_value()) };
+
+		no.set_text(tr('LC_CONFIRM_NO'));
+		no.click_actions.click = function() { popup.remove() };
+	};
+
+	return pane;
+};
+
+function soh_control_panel_create(parent, caption, toolbar)
+{
+	const pane = pane_create(parent);
+	register_hint_dialog(pane, tr("LC_HINT_SOH_CTL"));
+
+	pane.text.set_text(tr(caption));
+	pane.toolbar.set_text(toolbar);
+	pane.toolbar.set_size(2);
+
+	paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_MULTIPLIER, pane.content, 0.0, 3.0, 0.1,
+			      'LC_SOH_MULTIPLIER');
+
+	/* Action applier with status (awful...) */
+	let a = action_applier_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET, pane.content, 'LC_RESET_SOH_TITLE', '&#10227',
+			      'LC_RESET_SOH_WARNING');
+	net.add_listener(a.toolbar, LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET_STAT);
+	a.toolbar.net.recv = function(data) {
+		const stat = parseInt(data);
+
+		let stat_str = "unknown";
+
+		if (stat <= 4) {
+			stat_str = ["stopped", "active", "succeed", "failed", "timeout"][stat];
+		}
+
+		a.toolbar.set_text('(' + stat_str + ') ' + '&#10227');
+	};
+	a.toolbar.set_size(1.5);
+
+	return pane;
+}
+
 function firmware_updater_create(parent, version)
 {
 	var update_firmware = pane_create(parent);
+	register_hint_dialog(update_firmware, tr("LC_HINT_FW_UPDATE"));
+	
 	update_firmware.text.set_text(tr('LC_FIRMWARE_UPDATE_TITLE'));
 
 	// update_firmware.content.style.flexDirection = "column";
@@ -893,57 +1380,24 @@ function firmware_updater_create(parent, version)
 		</form>');
 };
 
-l = container_create(document.body);
+/*----------------------------------------------------------- Create Widgets */
+const l = container_create(document.body);
 l.set_direction('v');
 
-status_widget_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_STATUS, l);
+status_widget = status_widget_create(l);
+bypass_create(l);
+filter_leafspy_create(l);
+version_setter_create(l);
+capacity_panel_create(l);
+soh_control_panel_create(l, 'LC_SOH_CONTROL', '');
 
-paned_checkbox_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_BYPASS_EN, l,
-		      'LC_BYPASS_FILTER');
-
-paned_checkbox_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_CAPACITY_OVERRIDE_EN, l,
-		      'LC_MANUAL_CAPACITY_EN');
-
-paned_checkbox_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_FILTER_LEAFSPY, l,
-		      'LC_FILTER_LEAFSPY');
-
-paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_CAPACITY_OVERRIDE_KWH, l, 4, 80, 4,
-		       'LC_SET_CAPACITY_KWH');
-
-action_applier_create(LEAF_CAN_FILTER_WEB_MSG_RESET_SOC, l, 'LC_RESET_SOC_TITLE', '&#8635',
-		      'LC_RESET_SOC_CONFIRM');
-
-paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_CAPACITY_FULL_VOLTAGE_V, l, 350, 450, 4,
-		       'LC_SET_FULL_VOLTAGE');
-
-paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_MULTIPLIER, l, 0.0, 3.0, 0.1,
-		       'LC_SOH_MULTIPLIER');
-
-paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_BMS_VER, l, 0.0, 3.0, 1.0,
-		       'LC_BMS_VERSION_SET');
-
-/* Action applier with status (awful...) */
-let a = action_applier_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET, l, 'LC_RESET_SOH_TITLE', '&#10227',
-		      'LC_RESET_SOH_WARNING');
-net.add_listener(a.toolbar, LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET_STAT);
-a.toolbar.net.recv = function(data) {
-	const stat = parseInt(data);
-
-	let stat_str = "unknown";
-
-	if (stat <= 4) {
-		stat_str = ["stopped", "active", "succeed", "failed", "timeout"][stat];
-	}
-
-	a.toolbar.set_text('(' + stat_str + ') ' + '&#10227');
-};
-a.toolbar.set_size(2);
-
-action_applier_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_WIFI_STOP, l, 'LC_WIFI_OFF_TITLE', '&#128225',
+const wifioff = action_applier_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_WIFI_STOP, l, 'LC_WIFI_OFF_TITLE', '&#128225',
 		      'LC_WIFI_OFF_CONFIRM');
+register_hint_dialog(wifioff, tr("LC_HINT_WIFI_OFF"));
 
-action_applier_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_CPU_RESET, l, 'LC_REBOOT_TITLE', '&#8635',
+const reboot = action_applier_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_CPU_RESET, l, 'LC_REBOOT_TITLE', '&#8635',
 		      'LC_REBOOT_CONFIRM');
+register_hint_dialog(reboot, tr("LC_HINT_REBOOT"));
 
 firmware_updater_create(l, '@ENV:__CAN_FILTER_VERSION__');
 </script>
