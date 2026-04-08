@@ -154,6 +154,10 @@ struct leaf_bms_vars {
 	float charge_power_limit_kwt;
 	float max_power_for_charger_kwt;
 	float temperature_c;
+
+	/** When manual capacity is enabled,
+	 * this mux will replace the original mux. */
+	bool full_cap_mux;
 };
 
 void leaf_bms_vars_init(struct leaf_bms_vars *self)
@@ -172,6 +176,8 @@ void leaf_bms_vars_init(struct leaf_bms_vars *self)
 	self->charge_power_limit_kwt = 0.0f;
 	self->max_power_for_charger_kwt = 0.0f;
 	self->temperature_c = 0.0f;
+
+	self->full_cap_mux = true;
 }
 
 /******************************************************************************
@@ -470,7 +476,6 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 	bool     full_cap_bars_mux  = false; /* cap_bars: full or remain */
  	uint8_t  cap_bars           = 0U;
 
-
 	/* SG_ LB_Remain_Capacity :
 	 * 	7|10@0+ (1,0) [0|500] "gids" Vector__XXX */
 	capacity_gids = ((uint16_t)frame->data[0] << 2u) |
@@ -484,6 +489,20 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 	/* SG_ LB_Capacity_Deterioration_Rate :
 	 * 	33|7@1+ (1,0) [0|100] "%" Vector__XXX */
 	soh_pct = frame->data[4] >> 1u;
+
+	/* Alternate full capacity mux manually
+	 * This is required, because not all batteries has
+	 * this mux (24kwh does not). They report remaining capacity only.
+	 * 24kwh batteries have its full capacity set implicitly.
+	 * We do not care and set it explicitly, so it works for all batts. */
+	if (self->settings.capacity_override_enabled) {
+		self->_bms_vars.full_cap_mux = !self->_bms_vars.full_cap_mux;
+
+		/* Override local capacity mux (for this message) */
+		full_capacity_mux = self->_bms_vars.full_cap_mux;
+		frame->data[5] &= 0xEFu; /* mask: 11101111 */
+		frame->data[5] |= (uint8_t)full_capacity_mux << 4u;
+	}
 
 	/* Override SOH */
 	if (self->settings.capacity_override_enabled) {
