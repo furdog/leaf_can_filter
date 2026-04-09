@@ -156,8 +156,10 @@ struct leaf_bms_vars {
 	float temperature_c;
 
 	/** When manual capacity is enabled,
-	 * this mux will replace the original mux. */
-	bool full_cap_mux;
+	 * this mux will replace the original mux.
+	 * But only for period of mux counter */
+	uint16_t full_cap_mux_counter;
+	bool     full_cap_mux;
 };
 
 void leaf_bms_vars_init(struct leaf_bms_vars *self)
@@ -177,7 +179,8 @@ void leaf_bms_vars_init(struct leaf_bms_vars *self)
 	self->max_power_for_charger_kwt = 0.0f;
 	self->temperature_c = 0.0f;
 
-	self->full_cap_mux = true;
+	self->full_cap_mux_counter = 0u;
+	self->full_cap_mux         = true;
 }
 
 /******************************************************************************
@@ -494,8 +497,13 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 	 * This is required, because not all batteries has
 	 * this mux (24kwh does not). They report remaining capacity only.
 	 * 24kwh batteries have its full capacity set implicitly.
-	 * We do not care and set it explicitly, so it works for all batts. */
-	if (self->settings.capacity_override_enabled) {
+	 * We do not care and set it explicitly, so bars on
+	 * display will update. But we do it only for short period of time.
+	 * It looks like 24kwt leafs do not fully understand this behaviour
+	 * and start to alternate display KM as well */
+	if (self->settings.capacity_override_enabled &&
+	    self->_bms_vars.full_cap_mux_counter < 10u) {
+		self->_bms_vars.full_cap_mux_counter++;
 		self->_bms_vars.full_cap_mux = !self->_bms_vars.full_cap_mux;
 
 		/* Override local capacity mux (for this message) */
@@ -602,6 +610,9 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 	case 1468U: {
 		/* If LBC not booted up - exit */
 		if (frame->data[0U] == 0xFFU) {
+			/* Reset some states before boot */
+			self->_bms_vars.full_cap_mux_counter = 0u;
+			self->_bms_vars.full_cap_mux         = true;
 			break;
 		}
 

@@ -185,6 +185,7 @@ void leaf_can_filter_web_recv_msg(struct leaf_can_filter *self,
 	case LEAF_CAN_FILTER_WEB_MSG_TYPE_CAPACITY_OVERRIDE_KWH:
 		self->settings.capacity_override_kwh = value.as<float>();
 		chgc_set_full_cap_kwh(&self->_chgc, value.as<float>());
+		self->_bms_vars.full_cap_mux_counter = 0u;
 		leaf_can_filter_fs_save(self);
 
 		break;
