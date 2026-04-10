@@ -445,10 +445,17 @@ void _leaf_can_filter_ze0_x5BC(struct leaf_can_filter *self,
 	self->_bms_vars.full_capacity_wh *= 80U;
 	self->_bms_vars.full_capacity_wh += 20000U;
 
-	/* Override leafspy amphours */
+	/* Override leafspy amphours and soc */
 	if (self->settings.capacity_override_enabled) {
-		self->lscfi.lbc.ovd.ah = chgc_get_full_cap_wh(&self->_chgc)
-					 / 355.2f; /* 3.7v * 96cells */
+		uint32_t fullcap = chgc_get_full_cap_wh(&self->_chgc);
+
+		self->lscfi.lbc.ovd.ah = fullcap / 355.2f; /* 3.7v * 96cells */
+
+		if (fullcap > 0u) {
+			self->lscfi.lbc.ovd.soc =
+			      (chgc_get_remain_cap_wh(&self->_chgc) * 100.0f) /
+			       fullcap;
+		}
 	}
 
 	self->_bms_vars.remain_capacity_wh  = remain_capacity_gids;
@@ -576,10 +583,17 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 		self->_bms_vars.remain_capacity_wh *= 80U;
 	}
 
-	/* Override leafspy amphours */
+	/* Override leafspy amphours and soc */
 	if (self->settings.capacity_override_enabled) {
-		self->lscfi.lbc.ovd.ah = chgc_get_full_cap_wh(&self->_chgc)
-					 / 355.2f; /* 3.7v * 96cells */
+		uint32_t fullcap = chgc_get_full_cap_wh(&self->_chgc);
+
+		self->lscfi.lbc.ovd.ah = fullcap / 355.2f; /* 3.7v * 96cells */
+
+		if (fullcap > 0u) {
+			self->lscfi.lbc.ovd.soc =
+			      (chgc_get_remain_cap_wh(&self->_chgc) * 100.0f) /
+			       fullcap;
+		}
 	}
 
 	if (full_cap_bars_mux) {

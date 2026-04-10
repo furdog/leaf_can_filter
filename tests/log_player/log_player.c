@@ -152,10 +152,10 @@ void leaf_can_filter_print_variables(struct leaf_can_filter_frame *df,
 
 	sprintf(buf + strlen(buf), "\033[K\n");
 
-	sprintf(buf + strlen(buf), "leafspy_soc:       %u                  \n",
+	sprintf(buf + strlen(buf), "leafspy_soc:       %f                  \n",
 		((lscfi._buf[31] << 16) |
 		 (lscfi._buf[32] << 8) |
-		  lscfi._buf[33]));
+		  lscfi._buf[33]) / 10000.0f);
 	sprintf(buf + strlen(buf), "leafspy_temp:      %i                  \n",
 		lscfi._buf[4] - 40);
 	sprintf(buf + strlen(buf), "leafspy_curA0:     %f                  \n",
@@ -211,12 +211,13 @@ int main()
 	simple_log_reader_init(&c_inst);
 	log_player_leaf_can_filter_init();
 
-	chgc_set_full_cap_kwh(&fi._chgc, 40.0f);
+	chgc_set_full_cap_kwh(&fi._chgc, 30.0f);
 	chgc_set_initial_cap_kwh(&fi._chgc, 5.120f);
 	fi.settings.capacity_override_enabled = true;
 	fi.settings.bms_version_override = 0u;
 	fi.settings.soh_mul = 1.0f;
-	file = fopen(files[0], "r");
+	fi.settings.filter_leafspy = true;
+	file = fopen(files[9], "r");
 	assert(file);
 	
 	c = getc(file);
