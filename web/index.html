@@ -874,13 +874,16 @@ function regulator_create(parent)
 	head.manual_input = function() {
 		const input = manual_input_create(head);
 
+		let mul = (format == 'percentage' ? 100 : 1);
+
 		input.field.set_type('number');
-		input.field.set_min(min);
-		input.field.set_max(max);
-		input.field.set_step(step);
-		input.field.set_value(value.toFixed(digits));
+		input.field.set_min(min * mul);
+		input.field.set_max(max * mul);
+		input.field.set_step(step * mul);
+		input.field.set_value(value.toFixed(digits) * mul);
 
 		input.button.click_actions.set_value = function() {
+			input.field.value /= mul;
 			head.set_value(input.field.value);
 			head.on_change();
 		};
@@ -961,7 +964,7 @@ function loading_create(parent)
 };
 
 /* PANED REGULATOR */
-function paned_regulator_create(id, parent, rmin, rmax, rstep, caption)
+function paned_regulator_create(id, parent, rmin, rmax, rstep, caption, format)
 {
 	const pane	= pane_create(parent);
 	var   regulator = regulator_create(pane.content);
@@ -973,6 +976,7 @@ function paned_regulator_create(id, parent, rmin, rmax, rstep, caption)
 	regulator.set_max(rmax);
 	regulator.set_step(rstep);
 	regulator.set_value(rmin);
+	if (format != undefined) regulator.set_format(format);
 
 	net.add_listener(regulator, id);
 
@@ -1337,7 +1341,7 @@ function soh_control_panel_create(parent, caption, toolbar)
 	pane.toolbar.set_size(2);
 
 	paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_MULTIPLIER, pane.content, 0.0, 3.0, 0.1,
-			      'LC_SOH_MULTIPLIER');
+			      'LC_SOH_MULTIPLIER', 'percentage');
 
 	/* Action applier with status (awful...) */
 	let a = action_applier_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET, pane.content, 'LC_RESET_SOH_TITLE', '&#10227',
