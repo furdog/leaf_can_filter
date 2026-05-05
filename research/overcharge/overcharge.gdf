@@ -1,0 +1,5 @@
+Z,1db,ffffffffffffffff,28,1,N,0,1,1,-1,32,78,22,LB_Full_CHARGE_flag,128,128,128,0,N,0,1,x1DB,LB_Full_CHARGE_flag
+Z,1dc,ffffffffffffffff,-19,10,N,-10,0.1,1,-1,11,85,64,LB_MAX_POWER_FOR_CHAGER,128,128,128,0,N,0,1,x1DC,LB_MAX_POWER_FOR_CHAGER
+Z,1dc,ffffffffffffffff,37,3,N,0,1,1,-1,57,47,127,LB_BPCMAX_UPRATE,128,128,128,0,N,0,1,x1DC,LB_BPCMAX_UPRATE
+Z,380,ffffffffffffffff,38,1,N,0,1,1,-1,121,68,41,Normal_Charger_Relay_Status_Flag,128,128,128,0,N,0,1,x380,Normal_Charger_Relay_Status_Flag
+Z,5bf,ffffffffffffffff,32,8,N,0,1,1,-1,84,17,57,Charger_Status,128,128,128,0,N,0,1,x5BF,Charger_Status
