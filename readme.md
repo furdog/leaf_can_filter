@@ -32,7 +32,7 @@ MSB -> 35,     36: (uint16_t)ah /* in LeafSpy */
        37, ... 40: /* Unknown purpose (not found during survey) */
 ```
 
-## Other observations & tasks
+## Implementation notes
 (15.04.2026, AZE0, old generation leaf)
 
 There's an demand to add battery overcharge function (to charge more than 4.10V per cell).
@@ -115,6 +115,10 @@ I have also found that there's VCM message that is responsible for stop of charg
 If that's the case, then suppression here is needed too.
 
 Looks like VCM sets `Charge_StatusTransitionReqest` flag after `LB_Full_CHARGE_flag`, but there are some fluctuations happening in unknown data fields right before stopping. I have found that battery current also drops right before stop of charging.
+
+> 09.06.2026
+
+Added Isolation Resistance sensor override option.
 
 ---
 

@@ -1103,6 +1103,7 @@ const LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET               = 12;
 const LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET_STAT          = 13;
 const LEAF_CAN_FILTER_WEB_MSG_RESET_SOC			   = 14;
 const LEAF_CAN_FILTER_WEB_MSG_SET_SOC			   = 15;
+const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE      = 16;
 
 /*------------------------------------------ Floating Speech Balloon (HINTS) */
 function hints_button_create() {
@@ -1236,6 +1237,13 @@ function filter_leafspy_create(parent) {
 			      'LC_FILTER_LEAFSPY');
 
 	register_hint_dialog(e, tr("LC_HINT_FILTER_LEAFSPY"));
+}
+
+function override_ir_sensor_create(parent) {
+	const e = paned_checkbox_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE, parent,
+			      'LC_OVERRIDE_IR_SENSOR');
+
+	register_hint_dialog(e, tr("LC_HINT_OVERRIDE_IR_SENSOR"));
 }
 
 function version_setter_create(parent) {
@@ -1391,6 +1399,7 @@ l.set_direction('v');
 status_widget = status_widget_create(l);
 bypass_create(l);
 filter_leafspy_create(l);
+override_ir_sensor_create(l);
 version_setter_create(l);
 capacity_panel_create(l);
 soh_control_panel_create(l, 'LC_SOH_CONTROL', '');

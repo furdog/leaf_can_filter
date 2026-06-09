@@ -74,6 +74,9 @@ void leaf_can_filter_print_variables(struct leaf_can_filter_frame *df,
 	static uint8_t x1db_raw_dat_d[8];
 	static uint8_t x1db_raw_dat[8];
 
+	static uint8_t x55b_raw_dat_d[8];
+	static uint8_t x55b_raw_dat[8];
+
 	char buf[1024*4];
 	buf[0] = '\0';
 
@@ -90,6 +93,11 @@ void leaf_can_filter_print_variables(struct leaf_can_filter_frame *df,
 	if (f->id == 0x1DB) {
 		memcpy(x1db_raw_dat_d, df->data, 8u);
 		memcpy(x1db_raw_dat, f->data, 8u);
+	}
+
+	if (f->id == 0x55B) {
+		memcpy(x55b_raw_dat_d, df->data, 8u);
+		memcpy(x55b_raw_dat, f->data, 8u);
 	}
 
 	sprintf(buf, "\033[H");
@@ -175,6 +183,10 @@ void leaf_can_filter_print_variables(struct leaf_can_filter_frame *df,
 	sprintf(buf + strlen(buf), "leafspy_data: ");
 	leaf_can_filter_print_hex_array_len(buf, lscfi._buf, lscfi._len_buf);
 
+	sprintf(buf + strlen(buf), "55b_raw_dat_d:   ");
+	leaf_can_filter_print_hex_array(buf, x55b_raw_dat_d);
+	sprintf(buf + strlen(buf), "55b_raw_dat:     ");
+	leaf_can_filter_print_hex_array(buf, x55b_raw_dat);
 
 	sprintf(buf + strlen(buf), "\033[K\n");
 
@@ -217,7 +229,8 @@ int main()
 	fi.settings.bms_version_override = 0u;
 	fi.settings.soh_mul = 1.0f;
 	fi.settings.filter_leafspy = true;
-	file = fopen(files[9], "r");
+	fi.settings.ir_sensor_override = true;
+	file = fopen(files[0], "r");
 	assert(file);
 	
 	c = getc(file);

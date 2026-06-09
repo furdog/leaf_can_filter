@@ -203,6 +203,9 @@ struct leaf_can_filter_settings {
 
 	/* bms version override */
 	uint8_t bms_version_override;
+
+	/* Filter isolation fault */
+	bool ir_sensor_override;
 };
 
 struct leaf_can_filter {
@@ -751,6 +754,22 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 						1u : 0u;
 
 		break;
+
+	case 0x55B:
+		if (self->settings.ir_sensor_override) {
+			/* TODO log real value? */
+			/*uint16_t ir_sensor_wave_voltage_mV =
+				((uint16_t)frame->data[4] << 2u) |
+				((uint16_t)frame->data[5] >> 6u);*/
+
+			uint16_t overriden = 1000u;
+
+			frame->data[4] &= 0x00u; /* mask: 00000000 */
+			frame->data[4] |= (overriden >> 2u);
+			frame->data[5] &= 0x3Fu; /* mask: 00111111 */
+			frame->data[5] |= (overriden << 6u);
+		}
+		break;
 	
 	default:
 		break;
@@ -781,6 +800,8 @@ void leaf_can_filter_init(struct leaf_can_filter *self)
 
 	s->soh_mul = 1.0f;
 	s->bms_version_override = 0u;
+
+	s->ir_sensor_override = false;
 
 	/* Other (some settings may depend on FS) */
 	chgc_init(&self->_chgc);
