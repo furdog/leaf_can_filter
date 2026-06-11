@@ -119,6 +119,16 @@ Looks like VCM sets `Charge_StatusTransitionReqest` flag after `LB_Full_CHARGE_f
 > 09.06.2026
 
 Added Isolation Resistance sensor override option.
+I think that adding multiplier or other options will be `safer` option.
+Currently static value of 1000mV is set, so the sensor is basically completely ignored.
+
+> 11.06.2026
+
+Attempt to fix soh settings, so now they change
+not based on manual_capacity flag.
+
+Also tried to add soh setting to leafspy filtering, but overriding `hx` had no effect.
+Probably it stored in different group.
 
 ---
 

@@ -390,7 +390,7 @@ void _leaf_can_filter_ze0_x5BC(struct leaf_can_filter *self,
 	/* Override SOH (again, but manually)
 	 *  SG_ LB_Capacity_Deterioration_Rate :
 	 * 	33|7@1+ (1,0) [0|100] "%" Vector__XXX */
-	if (self->settings.capacity_override_enabled) {
+	/*if (self->settings.capacity_override_enabled)*/ {
 		float overriden = (float)soh_pct * self->settings.soh_mul;
 
 		if (overriden > (float)0x7Fu) {
@@ -399,6 +399,9 @@ void _leaf_can_filter_ze0_x5BC(struct leaf_can_filter *self,
 
 		frame->data[4] &= 0x01u; /* mask: 00000001 */
 		frame->data[4] |= ((uint8_t)overriden << 1u);
+
+		/* Leafspy */
+		self->lscfi.lbc.ovd.soh = overriden;
 
 		/* TODO do not override original read values */
 		soh_pct = (uint8_t)overriden;
@@ -523,7 +526,7 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 	}
 
 	/* Override SOH */
-	if (self->settings.capacity_override_enabled) {
+	/*if (self->settings.capacity_override_enabled)*/ {
 		float overriden = (float)soh_pct * self->settings.soh_mul;
 
 		if (overriden > (float)0x7Fu) {
@@ -533,6 +536,9 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 		frame->data[4] &= 0x01u; /* mask: 00000001 */
 		frame->data[4] |= ((uint8_t)overriden << 1u);
 
+		/* Leafspy */
+		self->lscfi.lbc.ovd.soh = overriden;
+
 		/* TODO do not override original read values */
 		soh_pct = (uint8_t)overriden;
 	}
@@ -540,7 +546,8 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 	full_cap_bars_mux = (frame->data[4] & 0x01u);
 	cap_bars          = (frame->data[2] & 0xFFu);
 
-	if (self->settings.capacity_override_enabled) {
+	if (self->settings.capacity_override_enabled ||
+	    (self->settings.soh_mul != 1.0f)) {
 		uint8_t overriden =
 			_leaf_can_filter_aze0_x5BC_get_cap_bars_overriden(
 				self, full_cap_bars_mux, soh_pct

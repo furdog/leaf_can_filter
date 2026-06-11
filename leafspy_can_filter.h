@@ -18,6 +18,7 @@ enum leafspy_query_type {
 struct leafspy_can_lbc_override {
 	float ah;
 	float soc;
+	float soh;
 };
 
 struct leafspy_can_lbc {
@@ -64,6 +65,7 @@ void leafspy_can_filter_init(struct leafspy_can_filter *self)
 	self->lbc.ah  = 0.0f;
 	self->lbc.ovd.ah  = 0.0f;
 	self->lbc.ovd.soc = 0.0f;
+	self->lbc.ovd.soh = 0.0f;
 
 	iso_tp_init(&self->iso_tp);
 
@@ -137,7 +139,9 @@ void leafspy_can_filter_process_lbc_block1_answer_pdu(
 	case 3u: /* 20 ... 26 */
 		self->lbc.voltage_V = ((d[0] << 8) | d[1]) / 100.0f;
 		break;
-	case 4u: /* 27 ... 33 */
+	case 4u: /* 27 ... 33 */ {
+		bool n_pdu_override = false;
+
 		self->lbc.hx  = ((d[1] << 8) | d[2]) / 100.0f;
 		self->lbc.soc = ((d[4] << 16u) | (d[5] << 8u) | d[6]) /
 				10000.0f;
@@ -147,10 +151,23 @@ void leafspy_can_filter_process_lbc_block1_answer_pdu(
 			d[4] = (soc_raw & 0xFF0000u) >> 16u;
 			d[5] = (soc_raw & 0x00FF00u) >> 8u;
 			d[6] = (soc_raw & 0x0000FFu) >> 0u;
+			n_pdu_override = true;
+		}
+
+		if (self->lbc.ovd.soh > 0.0f) {
+			uint16_t soh_raw = self->lbc.ovd.soh * 100.0f;
+			d[1] = (soh_raw & 0xFF00u) >> 8u;
+			d[2] = (soh_raw & 0x00FFu) >> 0u;
+			n_pdu_override = true;
+		}
+
+		if (n_pdu_override) {
 			(void)iso_tp_override_n_pdu(&self->iso_tp, n_pdu);
 		}
 
 		break;
+	}
+
 	case 5u: /* 34 ... 40 */
 		self->lbc.ah = ((d[1] << 8) | d[2]) / 39.0f; /* Weird */
 
