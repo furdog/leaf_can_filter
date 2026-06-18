@@ -130,6 +130,48 @@ not based on manual_capacity flag.
 Also tried to add soh setting to leafspy filtering, but overriding `hx` had no effect.
 Probably it stored in different group.
 
+> 17.06.2026
+
+Researching why 24kwh aze0 goes turtle after internal capacity goes to zero…
+`ch1_20260612_CANBOX_ACTIV.csv`
+`ch1_20260612_OBXID_STALA.csv`
+
+I have found difference in usable SOC `(0x1DB, LB_Usable_SOC, byte 4 [6...0])`.
+It must be set to filtered soc. (Was already done)
+
+There also should be detection of 24kwh aze0. They don't have alternating mux value for GIDS.
+CAN filter also expects full capacity available (full gids), but it never gets one, because of that.
+
+I have found `0x5A9` (VCM, not BMS) message which:
+- `LowBattery` goes from 0 to 1
+- `CriticalBattery` signal goes from 0 to 1
+- `ECOmodeActive` goes from 0 to 3
+- `RangeInstrumentCluster` drops from 110km to 4km
+The message dbc is incomplete, and there are more data. Needs further research.
+
+`0x5b9` (also VCM):
+- `ActiveFuelBars` goes from 5 to 0.
+- `ChargeMinutesRemaining` is also changed
+
+`0x5bc` (Highly confident about this):
+`LB_Output_Power_Limit_Reason` is changed from 0(NORMAL) to 1(CAPACITY DROP)
+`CapacityBars` changed from 15 to 7
+`ChargeBars` changed from 6 to 0
+`LB_Remain_Capacity_GIDS` from 201 to 6
+`LB_Remaining_Capacity_Segments` muxxing changed from 240-96 to 116-0
+
+So, here is my theory - it's either bms sets `LB_Output_Power_Limit_Reason` and we only need to fix this,
+or it is VCM has it's own capacity counter, which is little more complicated to fix.
+In the case of VCM i assume that sending full charge flag artifically, we can reset VCM counter.
+Need to confirm that on practice...
+
+There's also a possibility to fix old leaf charging bars scaling, based on https://github.com/dalathegreat/Nissan-LEAF-Battery-Upgrade
+To fix instrumentation cluster on old leaf models:
+* Between 1-3 seconds after power-on (startup_counter_1DB between 100-300ms), sets the "full charge flag" to ON
+* At the same time set GIDS to full capacity
+* This signals to the instrumentation cluster that the battery is at full capacity, allowing it to calibrate the scaling bars correctly
+* The fix is skipped during charge sessions to avoid disrupting charging operations
+
 ---
 
 ## To-Do List
@@ -154,7 +196,8 @@ Probably it stored in different group.
 * ~~English version of UI~~
 * add filesystem checksum
 * ~~add hints button~~
+* Fix ze0 instumentation cluster
 
-**Completion: 10/21**
+**Completion: 10/22**
 
 ---
