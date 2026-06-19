@@ -284,6 +284,29 @@ uint16_t _leaf_can_filter_wh_to_gids(uint32_t wh)
 	return (wh + 40u) / 80u;
 }
 
+/* Multiplies SOH by user multiplier, overrides the original value.
+ *  SG_ LB_Capacity_Deterioration_Rate :
+ * 	33|7@1+ (1,0) [0|100] "%" Vector__XXX */
+void _leaf_can_filter_x5BC_override_soh(struct leaf_can_filter *self,
+					struct leaf_can_filter_frame *frame,
+					uint8_t *soh_pct)
+{
+	float overriden = (float)*soh_pct * self->settings.soh_mul;
+
+	if (overriden > (float)0x7Fu) {
+		overriden = (float)0x7Fu;
+	}
+
+	frame->data[4] &= 0x01u; /* mask: 00000001 */
+	frame->data[4] |= ((uint8_t)overriden << 1u);
+
+	/* Leafspy */
+	self->lscfi.lbc.ovd.soh = overriden;
+
+	/* TODO do not override original read values */
+	*soh_pct = (uint8_t)overriden;
+}
+
 uint8_t _leaf_can_filter_aze0_x5BC_get_cap_bars_overriden(
 	struct leaf_can_filter *self, bool full_cap_bars_mux, uint8_t soh_pct)
 {
@@ -329,7 +352,7 @@ void _leaf_can_filter_ze0_x5BC(struct leaf_can_filter *self,
 {
 	uint16_t remain_capacity_gids = 0U;
 	uint16_t full_capacity        = 0U;
-	uint16_t soh_pct              = 0U;
+	uint8_t  soh_pct              = 0U;
 
 	bool     full_cap_bars_mux = false; /* cap_bars: full or remain */
  	uint8_t  cap_bars          = 0U;
@@ -393,28 +416,11 @@ void _leaf_can_filter_ze0_x5BC(struct leaf_can_filter *self,
 			new_soh = 0x7Fu;
 		}
 
-		soh_pct = (uint16_t)new_soh;
+		soh_pct = (uint8_t)new_soh;
 	}
 
-	/* Override SOH (again, but manually)
-	 *  SG_ LB_Capacity_Deterioration_Rate :
-	 * 	33|7@1+ (1,0) [0|100] "%" Vector__XXX */
-	/*if (self->settings.capacity_override_enabled)*/ {
-		float overriden = (float)soh_pct * self->settings.soh_mul;
-
-		if (overriden > (float)0x7Fu) {
-			overriden = (float)0x7Fu;
-		}
-
-		frame->data[4] &= 0x01u; /* mask: 00000001 */
-		frame->data[4] |= ((uint8_t)overriden << 1u);
-
-		/* Leafspy */
-		self->lscfi.lbc.ovd.soh = overriden;
-
-		/* TODO do not override original read values */
-		soh_pct = (uint8_t)overriden;
-	}
+	/* Override SOH based on multiplier */
+	_leaf_can_filter_x5BC_override_soh(self, frame, &soh_pct);
 
 	/* SG_ LB_Remaining_Charge_Segment m0 :
 	 * 	16|4@1+ (1,0) [0|12] "dash bars" Vector__XXX */
@@ -496,7 +502,7 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 	bool full_capacity_mux = ((frame->data[5U] & 0x10U) > 0U);
 	uint16_t capacity_gids = 0U;
 
-	uint16_t soh_pct = 0U;
+	uint8_t soh_pct = 0U;
 
 	bool     full_cap_bars_mux  = false; /* cap_bars: full or remain */
  	uint8_t  cap_bars           = 0U;
@@ -534,23 +540,8 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 		frame->data[5] |= (uint8_t)full_capacity_mux << 4u;
 	}
 
-	/* Override SOH */
-	/*if (self->settings.capacity_override_enabled)*/ {
-		float overriden = (float)soh_pct * self->settings.soh_mul;
-
-		if (overriden > (float)0x7Fu) {
-			overriden = (float)0x7Fu;
-		}
-
-		frame->data[4] &= 0x01u; /* mask: 00000001 */
-		frame->data[4] |= ((uint8_t)overriden << 1u);
-
-		/* Leafspy */
-		self->lscfi.lbc.ovd.soh = overriden;
-
-		/* TODO do not override original read values */
-		soh_pct = (uint8_t)overriden;
-	}
+	/* Override SOH based on multiplier */
+	_leaf_can_filter_x5BC_override_soh(self, frame, &soh_pct);
 
 	full_cap_bars_mux = (frame->data[4] & 0x01u);
 	cap_bars          = (frame->data[2] & 0xFFu);
