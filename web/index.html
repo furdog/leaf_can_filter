@@ -1182,6 +1182,7 @@ function status_widget_create(parent)
 	pane.max_chg_in_kwt  = text_create(r);
 	pane.min_cell        = text_create(r);
 	pane.max_cell        = text_create(r);
+	pane.cpu_temp        = text_create(r);
 
 	//pane.session_kwt   = text_create(r);
 	//pane.total_kwt	   = text_create(r);
@@ -1195,7 +1196,7 @@ function status_widget_create(parent)
 
 	pane.net.recv = function(data) {
 		const [voltage, current, full_cap, cap, version, soh,
-		       temp, max_in, chg_max_in, min_cell, max_cell] = data;
+		       temp, max_in, chg_max_in, cpu_temp, min_cell, max_cell] = data;
 
 		let ver_str = "invalid";
 
@@ -1219,6 +1220,7 @@ function status_widget_create(parent)
 		pane.max_chg_in_kwt.set_text(tr("LC_STATUS_MAX_CHG_IN") + chg_max_in + "kWt");
 		//pane.min_cell.set_text(tr("LC_STATUS_MIN_CELL") + min_cell + "V");
 		//pane.max_cell.set_text(tr("LC_STATUS_MAX_CELL") + max_cell + "V (d=" + parseFloat(max_cell - min_cell).toFixed(3) + ")");
+		pane.cpu_temp.set_text("CPU temp: " + cpu_temp + "C");
 	};
 
 	return pane;
