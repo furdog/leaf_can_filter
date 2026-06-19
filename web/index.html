@@ -1105,6 +1105,8 @@ const LEAF_CAN_FILTER_WEB_MSG_RESET_SOC			   = 14;
 const LEAF_CAN_FILTER_WEB_MSG_SET_SOC			   = 15;
 const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE      = 16;
 
+const LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG         = 17;
+
 /*------------------------------------------ Floating Speech Balloon (HINTS) */
 function hints_button_create() {
 	const a = container_create(document.body);
@@ -1288,6 +1290,9 @@ function capacity_panel_create(parent)
 
 	const soc_control = soc_control_panel_create(LEAF_CAN_FILTER_WEB_MSG_SET_SOC, pane.content, 'LC_SOC_CONTROL', '&#128267');
 	register_hint_dialog(soc_control, tr("LC_HINT_SOC_CTL"));
+
+	const charge_flag = applier_button_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG, pane.content, 'LC_FULLCHARGE_FLAG', 'LC_FULLCHARGE_FLAG_CONFIRM');
+	register_hint_dialog(charge_flag, tr("LC_HINT_FULLCHARGE_FLAG"));
 
 	return pane;
 }

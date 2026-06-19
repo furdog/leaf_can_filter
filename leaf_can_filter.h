@@ -160,6 +160,12 @@ struct leaf_bms_vars {
 	 * But only for period of mux counter */
 	uint16_t full_cap_mux_counter;
 	bool     full_cap_mux;
+
+	/* This flag forces filter to tell EVC, that battery is
+	   fully charged for time period specified in
+	   full_charge_flag_timer_ms */
+	bool    full_charge_flag;
+	int16_t full_charge_flag_timer_ms;
 };
 
 void leaf_bms_vars_init(struct leaf_bms_vars *self)
@@ -181,6 +187,9 @@ void leaf_bms_vars_init(struct leaf_bms_vars *self)
 
 	self->full_cap_mux_counter = 0u;
 	self->full_cap_mux         = true;
+
+	self->full_charge_flag = false;
+	self->full_charge_flag_timer_ms = 0u;
 }
 
 /******************************************************************************
@@ -697,6 +706,11 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 			frame->data[4] = (uint8_t)dash_soc;
 		}
 
+		/* Set full charge flag */
+		if (self->_bms_vars.full_charge_flag) {
+			frame->data[3] = (frame->data[3] | 0x10);
+		}
+
 		self->_bms_vars.voltage_V = voltage_500mV / 2.0f;
 		self->_bms_vars.current_A = current_500mA / 2.0f;
 
@@ -786,6 +800,16 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 void _leaf_can_filter_update(struct leaf_can_filter *self,
 			     uint32_t delta_time_ms)
 {
+	/* If _bms_vars.full_charge_flag is enabled
+	   Decrease its timer. If timer goes below zero - reset the flag */
+	if (self->_bms_vars.full_charge_flag) {
+		if (self->_bms_vars.full_charge_flag_timer_ms > 0) {
+			self->_bms_vars.full_charge_flag_timer_ms -= delta_time_ms;
+		} else {
+			self->_bms_vars.full_charge_flag = false;
+		}
+	}
+
 	chgc_update(&self->_chgc, delta_time_ms);
 }
 

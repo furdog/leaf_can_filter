@@ -68,6 +68,8 @@ enum leaf_can_filter_web_msg_type {
 
 	LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE,
 
+	LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG,
+
 	LEAF_CAN_FILTER_WEB_MSG_MAX
 };
 
@@ -267,6 +269,12 @@ void leaf_can_filter_web_recv_msg(struct leaf_can_filter *self,
 		self->settings.ir_sensor_override = value.as<bool>();
 		leaf_can_filter_fs_save(self);
 
+		break;
+	}
+
+	case LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG: {
+		self->_bms_vars.full_charge_flag = true;
+		self->_bms_vars.full_charge_flag_timer_ms = 3000;
 		break;
 	}
 

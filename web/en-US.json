@@ -65,5 +65,9 @@
   "LC_OVERRIDE_IR_SENSOR" : "Ignore isolation (IR) sensor reading",
   "LC_HINT_OVERRIDE_IR_SENSOR" : "Forces the system to ignore isolation (IR) sensor readings and clears the associated fault code. HAZARD: Use for diagnostic purposes only! There is a risk of high-voltage shock if an actual current leak to the chassis is present.",
 
+  "LC_FULLCHARGE_FLAG" : "Send full charge signal",
+  "LC_FULLCHARGE_FLAG_CONFIRM" : "This feature may interrupt the charging process",
+  "LC_HINT_FULLCHARGE_FLAG" : "(EXPERIMENTAL) This feature sends a full battery charge signal to all vehicle systems. This is sometimes necessary to calibrate certain indicators related to remaining range."
+
   "LC_LAST_ELEMENT": ""
 }
