@@ -66,9 +66,11 @@ enum leaf_can_filter_web_msg_type {
 	LEAF_CAN_FILTER_WEB_MSG_TYPE_SOC_RESET,
 	LEAF_CAN_FILTER_WEB_MSG_TYPE_SET_SOC,
 
-	LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE,
-
 	LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG,
+
+	LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_STATUS     = 17,
+	LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE   = 18,
+	LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER = 19,
 
 	LEAF_CAN_FILTER_WEB_MSG_MAX
 };
@@ -154,8 +156,14 @@ void leaf_can_filter_web_send_initial_msg(struct leaf_can_filter *self)
 	narr.add(lcf_sr_get_status(&self->soh_rst_fsm));
 
 	narr = array.add<JsonArray>();
-	narr.add(LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE);
-	narr.add(self->settings.ir_sensor_override);
+	narr.add(LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_STATUS);
+	narr2 = narr.add<JsonArray>();
+	narr2.add(self->_bms_vars.ir_sensor_malfunction);
+	narr2.add(self->_bms_vars.ir_sensor_wave_voltage_mV);
+
+	narr = array.add<JsonArray>();
+	narr.add(LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER);
+	narr.add(self->settings.ir_sensor_multiplier);
 
 	serializeJson(array, serialized);
 	web_socket.textAll(serialized.c_str());
@@ -265,16 +273,15 @@ void leaf_can_filter_web_recv_msg(struct leaf_can_filter *self,
 		return;
 	}
 
-	case LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE: {
-		self->settings.ir_sensor_override = value.as<bool>();
-		leaf_can_filter_fs_save(self);
-
-		break;
-	}
-
 	case LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG: {
 		self->_bms_vars.full_charge_flag = true;
 		self->_bms_vars.full_charge_flag_timer_ms = 3000;
+		break;
+	}
+
+	case LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER: {
+		self->settings.ir_sensor_multiplier = value.as<float>();
+		leaf_can_filter_fs_save(self);
 		break;
 	}
 

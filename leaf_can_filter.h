@@ -166,6 +166,12 @@ struct leaf_bms_vars {
 	   full_charge_flag_timer_ms */
 	bool    full_charge_flag;
 	int16_t full_charge_flag_timer_ms;
+
+	/* Isolation Resistance sensor malfunction */
+	bool     ir_sensor_malfunction;
+
+	/* Isolation Resistance sensor voltage */
+	uint16_t ir_sensor_wave_voltage_mV;
 };
 
 void leaf_bms_vars_init(struct leaf_bms_vars *self)
@@ -190,6 +196,9 @@ void leaf_bms_vars_init(struct leaf_bms_vars *self)
 
 	self->full_charge_flag = false;
 	self->full_charge_flag_timer_ms = 0u;
+
+	self->ir_sensor_malfunction      = false;
+	self->ir_sensor_wave_voltage_mV  = 0u;
 }
 
 /******************************************************************************
@@ -214,7 +223,7 @@ struct leaf_can_filter_settings {
 	uint8_t bms_version_override;
 
 	/* Filter isolation fault */
-	bool ir_sensor_override;
+	float ir_sensor_multiplier;
 };
 
 struct leaf_can_filter {
@@ -768,19 +777,31 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 		break;
 
 	case 0x55B:
-		if (self->settings.ir_sensor_override) {
-			/* TODO log real value? */
-			/*uint16_t ir_sensor_wave_voltage_mV =
+		self->_bms_vars.ir_sensor_wave_voltage_mV =
 				((uint16_t)frame->data[4] << 2u) |
-				((uint16_t)frame->data[5] >> 6u);*/
+				((uint16_t)frame->data[5] >> 6u);
 
-			uint16_t overriden = 1000u;
+		self->_bms_vars.ir_sensor_malfunction = frame->data[5] & 1u;
+
+		if (self->settings.ir_sensor_multiplier != 1.0f) {
+			uint16_t overriden =
+				(self->_bms_vars.ir_sensor_wave_voltage_mV *
+				 self->settings.ir_sensor_multiplier);
+
+			/* Based on DBC
+			  the max value lies within first 10 bits... */
+			if (overriden > 1023u)
+				overriden = 1023u;
 
 			frame->data[4] &= 0x00u; /* mask: 00000000 */
 			frame->data[4] |= (overriden >> 2u);
 			frame->data[5] &= 0x3Fu; /* mask: 00111111 */
 			frame->data[5] |= (overriden << 6u);
 		}
+
+		/* For every bit there's 4.8828125 mV. (5000/1024)
+		   The maximum value in millivolts is 4990 */
+		self->_bms_vars.ir_sensor_wave_voltage_mV *= 4.8828125f;
 
 		_leaf_can_filter_calc_crc8(frame);
 
@@ -826,7 +847,7 @@ void leaf_can_filter_init(struct leaf_can_filter *self)
 	s->soh_mul = 1.0f;
 	s->bms_version_override = 0u;
 
-	s->ir_sensor_override = false;
+	s->ir_sensor_multiplier = 1.0f;
 
 	/* Other (some settings may depend on FS) */
 	chgc_init(&self->_chgc);

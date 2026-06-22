@@ -229,7 +229,7 @@ int main()
 	fi.settings.bms_version_override = 0u;
 	fi.settings.soh_mul = 1.0f;
 	fi.settings.filter_leafspy = true;
-	fi.settings.ir_sensor_override = true;
+	fi.settings.ir_sensor_multiplier = 1.0;
 	file = fopen(files[0], "r");
 	assert(file);
 	

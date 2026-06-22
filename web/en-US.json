@@ -62,12 +62,13 @@
   "LC_HINT_REBOOT": "Performs a soft reset of the filter module. Use this if the interface becomes unresponsive. You can also perform soft reset by pressing recirculation button (HVAC) 20 times",
   "LC_HINT_FW_UPDATE": "Displays current firmware version. It also allows you to upload new .bin files to improve filter logic or add support for new vehicle models. More firmware can be found on <a href=\"https://github.com/furdog\">https://github.com/furdog</a>",
 
-  "LC_OVERRIDE_IR_SENSOR" : "Ignore isolation (IR) sensor reading",
-  "LC_HINT_OVERRIDE_IR_SENSOR" : "Forces the system to ignore isolation (IR) sensor readings and clears the associated fault code. HAZARD: Use for diagnostic purposes only! There is a risk of high-voltage shock if an actual current leak to the chassis is present.",
+  "LC_IR_SENSOR_CONTROL" : "Override (IR) sensor readings",
+  "LC_IR_SENSOR_MULTIPLIER" : "IR sensor multiplier",
+  "LC_HINT_OVERRIDE_IR_SENSOR" : "Alters isolation (IR) sensor readings and clears the associated fault code. HAZARD: Use for diagnostic purposes only! There is a risk of high-voltage shock if an actual current leak to the chassis is present.",
 
   "LC_FULLCHARGE_FLAG" : "Send full charge signal",
   "LC_FULLCHARGE_FLAG_CONFIRM" : "This feature may interrupt the charging process",
-  "LC_HINT_FULLCHARGE_FLAG" : "(EXPERIMENTAL) This feature sends a full battery charge signal to all vehicle systems. This is sometimes necessary to calibrate certain indicators related to remaining range."
+  "LC_HINT_FULLCHARGE_FLAG" : "(EXPERIMENTAL) This feature sends a full battery charge signal to all vehicle systems. This is sometimes necessary to calibrate certain indicators related to remaining range.",
 
   "LC_LAST_ELEMENT": ""
 }

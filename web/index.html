@@ -1103,9 +1103,12 @@ const LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET               = 12;
 const LEAF_CAN_FILTER_WEB_MSG_TYPE_SOH_RESET_STAT          = 13;
 const LEAF_CAN_FILTER_WEB_MSG_RESET_SOC			   = 14;
 const LEAF_CAN_FILTER_WEB_MSG_SET_SOC			   = 15;
-const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE      = 16;
 
-const LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG         = 17;
+const LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG         = 16;
+
+const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_STATUS        = 17;
+const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE      = 18;
+const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER    = 19;
 
 /*------------------------------------------ Floating Speech Balloon (HINTS) */
 function hints_button_create() {
@@ -1243,13 +1246,6 @@ function filter_leafspy_create(parent) {
 	register_hint_dialog(e, tr("LC_HINT_FILTER_LEAFSPY"));
 }
 
-function override_ir_sensor_create(parent) {
-	const e = paned_checkbox_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE, parent,
-			      'LC_OVERRIDE_IR_SENSOR');
-
-	register_hint_dialog(e, tr("LC_HINT_OVERRIDE_IR_SENSOR"));
-}
-
 function version_setter_create(parent) {
 	const e = paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_BMS_VER, parent, 0.0, 3.0, 1.0,
 			       'LC_BMS_VERSION_SET');
@@ -1378,6 +1374,47 @@ function soh_control_panel_create(parent, caption, toolbar)
 	return pane;
 }
 
+/** Creates internal resistance sensor filtering control panel */
+function irsens_control_panel_create(parent, caption, toolbar)
+{
+	const pane = pane_create(parent);
+	register_hint_dialog(pane, tr("LC_HINT_OVERRIDE_IR_SENSOR"));
+
+	pane.text.set_text(tr(caption));
+	pane.toolbar.set_text("Status: Unknown");
+	//pane.toolbar.set_size(2);
+	pane.caption.style.flexDirection = "column";
+
+	const p_reg = paned_regulator_create(
+		LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER,
+			pane.content, 0.0, 3.0, 0.1,
+			'LC_IR_SENSOR_MULTIPLIER', 'percentage');
+
+	net.add_listener(pane.toolbar, LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_STATUS);
+	pane.toolbar.net.recv = function(data) {
+		const [malfunction, voltage_mV] = data;
+
+		let scaled_voltage_mV =
+			parseInt(voltage_mV * p_reg.content.regulator.get_value());
+		
+		if (scaled_voltage_mV > 4990) {
+			scaled_voltage_mV = 4990;
+		}
+		
+		pane.toolbar.set_text(
+			'Status: ' + (malfunction ? 'Malfunction' : 'OK') +
+			' ( ' + scaled_voltage_mV + ' mV ) ');
+	};
+	
+	//const e = paned_checkbox_create(
+	//	LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE,
+	//	pane.content, 'LC_IR_SENSOR_MULTIPLIER');
+
+	//register_hint_dialog(e, tr("LC_HINT_OVERRIDE_IR_SENSOR"));
+
+	return pane;
+}
+
 function firmware_updater_create(parent, version)
 {
 	var update_firmware = pane_create(parent);
@@ -1406,10 +1443,10 @@ l.set_direction('v');
 status_widget = status_widget_create(l);
 bypass_create(l);
 filter_leafspy_create(l);
-override_ir_sensor_create(l);
 version_setter_create(l);
 capacity_panel_create(l);
 soh_control_panel_create(l, 'LC_SOH_CONTROL', '');
+irsens_control_panel_create(l, 'LC_IR_SENSOR_CONTROL');
 
 const wifioff = action_applier_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_WIFI_STOP, l, 'LC_WIFI_OFF_TITLE', '&#128225',
 		      'LC_WIFI_OFF_CONFIRM');
