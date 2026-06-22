@@ -781,6 +781,9 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 			frame->data[5] &= 0x3Fu; /* mask: 00111111 */
 			frame->data[5] |= (overriden << 6u);
 		}
+
+		_leaf_can_filter_calc_crc8(frame);
+
 		break;
 	
 	default:
