@@ -602,7 +602,7 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 		   bms sets this flag when its internal capacity counter
 		   goes zero. This does not occur on >24kwh batteries by some
 		   reason. TODO do not perform this on other batteries */
-		frame->data[5] & 0xDF; /* mask: 11011111 */
+		frame->data[5] &= 0xDF; /* mask: 11011111 */
 	}
 
 	if (full_capacity_mux) {
