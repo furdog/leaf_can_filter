@@ -788,6 +788,27 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 		break;
 
 	case 0x55B:
+		/* Override LB_SOC and set battery empty flag to 0
+		   Looks like only meaningful for 24kwh aze0. */
+		if ((self->settings.capacity_override_enabled) &&
+		    (version == (uint8_t)LEAF_CAN_FILTER_BMS_VERSION_AZE0) &&
+		    (self->_bms_vars.full_capacity_wh > 0u)) {
+			uint32_t overriden =
+				(self->_bms_vars.remain_capacity_wh * 999u /
+				 self->_bms_vars.full_capacity_wh);
+
+			/* SG_ LB_SOC : 7|10@0+ (1,0) [0|1000] "%+1"
+			   Vector__XXX */
+			frame->data[0] &= 0x00u; /* mask: 00000000 */	
+			frame->data[0] |= (overriden >> 2u);
+			frame->data[1] &= 0x3Fu; /* mask: 00111111 */
+			frame->data[1] |= (overriden << 6u);
+
+			/*  SG_ LB_Capacity_Empty : 55|1@1+ (1,0) [0|1]
+			  "modemask" Vector__XXX */
+			frame->data[6] &= 0x7Fu; /* mask: 01111111 */
+		}
+
 		self->_bms_vars.ir_sensor_wave_voltage_mV =
 				((uint16_t)frame->data[4] << 2u) |
 				((uint16_t)frame->data[5] >> 6u);

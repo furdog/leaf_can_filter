@@ -177,6 +177,12 @@ To fix instrumentation cluster on old leaf models:
 I am highly confident that `LB_Output_Power_Limit_Reason` is the reason for power limit…
 Trying to fix this one.
 
+Ok… This did not work. Lefspy still says soc is 0...
+
+`0x55B`:
+LB_SOC is in zero, but should not be. Trying to override this one…
+LB_Capacity_Empty is set to true, but should be false.
+
 ---
 
 ## To-Do List
