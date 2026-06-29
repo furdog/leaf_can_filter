@@ -172,6 +172,11 @@ To fix instrumentation cluster on old leaf models:
 * This signals to the instrumentation cluster that the battery is at full capacity, allowing it to calibrate the scaling bars correctly
 * The fix is skipped during charge sessions to avoid disrupting charging operations
 
+> 29.6.2026
+
+I am highly confident that `LB_Output_Power_Limit_Reason` is the reason for power limit…
+Trying to fix this one.
+
 ---
 
 ## To-Do List

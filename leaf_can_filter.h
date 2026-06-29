@@ -592,6 +592,17 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 		frame->data[0] |= (overriden >> 2u);
 		frame->data[1] &= 0x3Fu; /* mask: 00111111 */
 		frame->data[1] |= (overriden << 6u);
+
+		/*if ((frame->data[5] >> 5) == 1u) {
+			... check if capacity drop flag is active
+		}*/
+
+		/* Ignore capacity drop flag. Normally only required
+		   to perform on 24kwt leaf aze0 batteries, because
+		   bms sets this flag when its internal capacity counter
+		   goes zero. This does not occur on >24kwh batteries by some
+		   reason. TODO do not perform this on other batteries */
+		frame->data[5] & 0xDF; /* mask: 11011111 */
 	}
 
 	if (full_capacity_mux) {
