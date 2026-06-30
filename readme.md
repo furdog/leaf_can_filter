@@ -183,6 +183,18 @@ Ok… This did not work. Lefspy still says soc is 0...
 LB_SOC is in zero, but should not be. Trying to override this one…
 LB_Capacity_Empty is set to true, but should be false.
 
+UPDATE: It works now! It correctly displays soc value in leafspy, as well as
+car is no longer in error mode.
+
+> 30.06.2026
+
+I have found that car doesn't limit discharge in any way after we ignore low capacity flags.
+It means battery voltage goes below certain voltage limits. Below 300 and less volts,
+which is highly undesirable. Must be fixed at any cost…
+
+Suggested changes: create min voltage slider as temporary solution
+Min voltage 310v - 355v
+
 ---
 
 ## To-Do List
