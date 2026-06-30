@@ -1110,6 +1110,9 @@ const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_STATUS        = 17;
 const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE      = 18;
 const LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER    = 19;
 
+const LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_ENABLED   = 20;
+const LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_VOLTAGE_V = 21;
+
 /*------------------------------------------ Floating Speech Balloon (HINTS) */
 function hints_button_create() {
 	const a = container_create(document.body);
@@ -1289,6 +1292,36 @@ function capacity_panel_create(parent)
 
 	const charge_flag = applier_button_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_FULLCHARGE_FLAG, pane.content, 'LC_FULLCHARGE_FLAG', 'LC_FULLCHARGE_FLAG_CONFIRM');
 	register_hint_dialog(charge_flag, tr("LC_HINT_FULLCHARGE_FLAG"));
+
+	const discharge_control = discharge_control_panel_create(pane.content);
+
+	return pane;
+}
+
+function discharge_control_panel_create(parent)
+{
+	const pane = pane_create(parent);
+	pane.text.set_text(tr('LC_DISCHARGE_CONTROL'));
+
+	/* Checkbox to enable or disable panel */
+	const checkbox = checkbox_create(pane.caption);
+	net.add_listener(checkbox, LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_ENABLED);
+	pane.content.classList.toggle('is-disabled', !checkbox.state);
+
+	checkbox.click_actions.send = function() {
+		pane.content.classList.toggle('is-disabled', !checkbox.state);
+		checkbox.net.send(checkbox.state ? 1 : 0)
+	};
+
+	checkbox.net.recv = function(data) {
+		pane.content.classList.toggle('is-disabled', !checkbox.state);
+		checkbox.set_state(JSON.parse(data));
+	}
+
+	paned_regulator_create(LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_VOLTAGE_V, pane.content, 310, 355, 5,
+			      'LC_DISCHARGE_CONTROL_VOLTAGE');
+
+	register_hint_dialog(pane, tr("LC_HINT_DISCHARGE_CONTROL"));
 
 	return pane;
 }

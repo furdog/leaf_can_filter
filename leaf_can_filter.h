@@ -138,6 +138,11 @@ void leaf_version_sniffer_step(struct leaf_version_sniffer *self,
 
 /******************************************************************************
  * BMS variables common for all leaf vehicles
+ * 
+ * TODO This structure should reflect original bms values.
+ *   Some values are being overriden and some are not.
+ *   This causes pretty much confusion when i have to get certain values.
+ *   There should be separate data structure to keep overriden values.
  *****************************************************************************/
 struct leaf_bms_vars {
 	float voltage_V;
@@ -149,7 +154,7 @@ struct leaf_bms_vars {
 	uint8_t full_cap_bars;
 	uint8_t remain_cap_bars;
 
-	uint8_t soh;
+	uint8_t soh_pct;
 
 	float charge_power_limit_kwt;
 	float max_power_for_charger_kwt;
@@ -185,7 +190,7 @@ void leaf_bms_vars_init(struct leaf_bms_vars *self)
 	self->full_cap_bars   = 0u;
 	self->remain_cap_bars = 0u;
 
-	self->soh = 0u;
+	self->soh_pct = 0u;
 
 	self->charge_power_limit_kwt = 0.0f;
 	self->max_power_for_charger_kwt = 0.0f;
@@ -224,6 +229,16 @@ struct leaf_can_filter_settings {
 
 	/* Filter isolation fault */
 	float ir_sensor_multiplier;
+
+	/* Must be enabled on 24kwh AZE0,
+	   since BMS on this one has a hardcoded bms that tells battery is
+	   dead after 24kwh is drained. Usually if the battery pack is 
+	   replaced with >24kwh battery. */
+	bool discharge_threshold_enabled;
+
+	/* How low battery can go, before setting soc to 
+	   discharge_threshold_soc_pct */
+	float discharge_threshold_voltage_V;
 };
 
 struct leaf_can_filter {
@@ -497,7 +512,7 @@ void _leaf_can_filter_ze0_x5BC(struct leaf_can_filter *self,
 		self->_bms_vars.remain_cap_bars = cap_bars;
 	}
 
-	self->_bms_vars.soh = soh_pct;
+	self->_bms_vars.soh_pct = soh_pct;
 }
 
 void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
@@ -596,7 +611,10 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 		/*if ((frame->data[5] >> 5) == 1u) {
 			... check if capacity drop flag is active
 		}*/
+	}
 
+	if (self->settings.capacity_override_enabled &&
+	    self->settings.discharge_threshold_enabled) {
 		/* Ignore capacity drop flag. Normally only required
 		   to perform on 24kwt leaf aze0 batteries, because
 		   bms sets this flag when its internal capacity counter
@@ -632,7 +650,7 @@ void _leaf_can_filter_aze0_x5BC(struct leaf_can_filter *self,
 		self->_bms_vars.remain_cap_bars = cap_bars;
 	}
 
-	self->_bms_vars.soh = soh_pct;
+	self->_bms_vars.soh_pct = soh_pct;
 }
 
 /* Filter HVBAT frames */
@@ -725,6 +743,23 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 		self->_bms_vars.voltage_V = voltage_500mV / 2.0f;
 		self->_bms_vars.current_A = current_500mA / 2.0f;
 
+		/* If capacity override_enabled and
+		   discharge threshold enabled and
+		   voltage is less than discharge threshold voltage
+		   and remaining capacity is bigger that 2% */
+		/* TODO this condition is little too inefficient and requires
+		   refactor... */
+		if (self->settings.capacity_override_enabled &&
+		    self->settings.discharge_threshold_enabled &&
+		    (self->_bms_vars.voltage_V <=
+		     self->settings.discharge_threshold_voltage_V) &&
+		    (chgc_get_remain_cap_kwh(&self->_chgc) >
+		     (chgc_get_full_cap_kwh(&self->_chgc) * 0.02))) {
+			/* Set manual capacity to 1% */
+			chgc_set_initial_cap_kwh(&self->_chgc,
+				chgc_get_full_cap_kwh(&self->_chgc) * 0.01);
+		}
+
 		/* Report voltage and current to our energy counter 
 		 * (Raw values scaled by 2x) */
 		chgc_set_voltage_V(&self->_chgc, voltage_500mV);
@@ -803,7 +838,12 @@ void _leaf_can_filter(struct leaf_can_filter *self,
 			frame->data[0] |= (overriden >> 2u);
 			frame->data[1] &= 0x3Fu; /* mask: 00111111 */
 			frame->data[1] |= (overriden << 6u);
+		}
 
+		/* Ignore capacity empty flag, if discharge threshold mode
+		   enabled */
+		if (self->settings.capacity_override_enabled &&
+		    self->settings.discharge_threshold_enabled) {
 			/*  SG_ LB_Capacity_Empty : 55|1@1+ (1,0) [0|1]
 			  "modemask" Vector__XXX */
 			frame->data[6] &= 0x7Fu; /* mask: 01111111 */
@@ -880,6 +920,9 @@ void leaf_can_filter_init(struct leaf_can_filter *self)
 	s->bms_version_override = 0u;
 
 	s->ir_sensor_multiplier = 1.0f;
+
+	s->discharge_threshold_enabled = false;
+	s->discharge_threshold_voltage_V = 310;
 
 	/* Other (some settings may depend on FS) */
 	chgc_init(&self->_chgc);

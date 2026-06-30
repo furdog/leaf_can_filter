@@ -134,7 +134,7 @@ void leaf_can_filter_print_variables(struct leaf_can_filter_frame *df,
 		fi._bms_vars.remain_cap_bars);
 
 	sprintf(buf + strlen(buf), "soh:             %u%%                  \n",
-		fi._bms_vars.soh);
+		fi._bms_vars.soh_pct);
 	sprintf(buf + strlen(buf), "chg_pow_lim_kwt: %f                    \n",
 		fi._bms_vars.charge_power_limit_kwt);
 	sprintf(buf + strlen(buf), "max_pow_for_chgr_kwt: %f               \n",
@@ -226,6 +226,7 @@ int main()
 	chgc_set_full_cap_kwh(&fi._chgc, 30.0f);
 	chgc_set_initial_cap_kwh(&fi._chgc, 5.120f);
 	fi.settings.capacity_override_enabled = true;
+	fi.settings.discharge_threshold_enabled = true;
 	fi.settings.bms_version_override = 0u;
 	fi.settings.soh_mul = 1.0f;
 	fi.settings.filter_leafspy = true;

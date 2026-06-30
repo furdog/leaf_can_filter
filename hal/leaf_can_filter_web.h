@@ -72,6 +72,9 @@ enum leaf_can_filter_web_msg_type {
 	LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_OVERRIDE   = 18,
 	LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER = 19,
 
+	LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_ENABLED   = 20,
+	LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_VOLTAGE_V = 21,
+
 	LEAF_CAN_FILTER_WEB_MSG_MAX
 };
 
@@ -117,7 +120,7 @@ void leaf_can_filter_web_send_initial_msg(struct leaf_can_filter *self)
 		narr2.add(leaf_version_sniffer_get_version(&self->lvs));
 	}
 
-	narr2.add(self->_bms_vars.soh);
+	narr2.add(self->_bms_vars.soh_pct);
 	narr2.add(self->_bms_vars.temperature_c);
 	narr2.add(self->_bms_vars.charge_power_limit_kwt);
 	narr2.add(self->_bms_vars.max_power_for_charger_kwt);
@@ -164,6 +167,14 @@ void leaf_can_filter_web_send_initial_msg(struct leaf_can_filter *self)
 	narr = array.add<JsonArray>();
 	narr.add(LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER);
 	narr.add(self->settings.ir_sensor_multiplier);
+
+	narr = array.add<JsonArray>();
+	narr.add(LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_ENABLED);
+	narr.add(self->settings.discharge_threshold_enabled);
+
+	narr = array.add<JsonArray>();
+	narr.add(LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_VOLTAGE_V);
+	narr.add(self->settings.discharge_threshold_voltage_V);
 
 	serializeJson(array, serialized);
 	web_socket.textAll(serialized.c_str());
@@ -281,6 +292,18 @@ void leaf_can_filter_web_recv_msg(struct leaf_can_filter *self,
 
 	case LEAF_CAN_FILTER_WEB_MSG_TYPE_IR_SENSOR_MULTIPLIER: {
 		self->settings.ir_sensor_multiplier = value.as<float>();
+		leaf_can_filter_fs_save(self);
+		break;
+	}
+
+	case LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_ENABLED: {
+		self->settings.discharge_threshold_enabled = value.as<bool>();
+		leaf_can_filter_fs_save(self);
+		break;
+	}
+
+	case LEAF_CAN_FILTER_WEB_MSG_TYPE_DISCHARGE_CONTROL_VOLTAGE_V: {
+		self->settings.discharge_threshold_voltage_V = value.as<float>();
 		leaf_can_filter_fs_save(self);
 		break;
 	}

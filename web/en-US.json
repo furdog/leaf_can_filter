@@ -70,5 +70,9 @@
   "LC_FULLCHARGE_FLAG_CONFIRM" : "This feature may interrupt the charging process",
   "LC_HINT_FULLCHARGE_FLAG" : "(EXPERIMENTAL) This feature sends a full battery charge signal to all vehicle systems. This is sometimes necessary to calibrate certain indicators related to remaining range.",
 
+  "LC_DISCHARGE_CONTROL" : "Manual discharge control",
+  "LC_DISCHARGE_CONTROL_VOLTAGE" : "Minimum discharge voltage",
+  "LC_HINT_DISCHARGE_CONTROL" : "(EXPERIMENTAL) This setting should normally not be enabled, but in some cars BMS will think that battery is drained after 24kwh even if its not. This setting may override this behaviour and discharge battery until specific voltage is reached. After that SOC will be set to 1%",
+
   "LC_LAST_ELEMENT": ""
 }

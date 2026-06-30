@@ -112,6 +112,17 @@ void leaf_can_filter_fs_load(struct leaf_can_filter *self)
 
 	chgc_set_initial_cap_kwh(&self->_chgc,
 			     self->settings.capacity_remaining_kwh);
+
+	/* Set limits */
+	if (self->settings.discharge_threshold_voltage_V < 310.0f) {
+		/* Failsafe. Disable threshold... */
+		self->settings.discharge_threshold_enabled = false;
+		self->settings.discharge_threshold_voltage_V = 310.0f;
+	} else if (self->settings.discharge_threshold_voltage_V > 355.0f) {
+		/* Failsafe. Disable threshold... */
+		self->settings.discharge_threshold_enabled = false;
+		self->settings.discharge_threshold_voltage_V = 355.0f;
+	}
 }
 
 void leaf_can_filter_fs_init(struct leaf_can_filter *self)
