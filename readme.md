@@ -224,3 +224,5 @@ Min voltage 310v - 355v
 **Completion: 10/22**
 
 ---
+# Bugs
+2012 leaf reported to work good on v0.5.1-1. Later versions reported to be buggy (turtle mode and isolation errors)
